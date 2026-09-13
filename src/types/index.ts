@@ -4,6 +4,7 @@ export interface Tenant {
   code: string;
   status: 'active' | 'inactive';
   userLicenses: number;
+  maxUsers?: number;
   availableMinutes: number;
   viciUserGroup: string;
   espoTeam: string;
@@ -143,12 +144,15 @@ export interface UserGroupItem {
 export interface Team {
   id: string;
   tenantId: string;
-  name: string;
-  description: string;
-  type: string;
-  campaignId: string;
-  campaignName: string;
-  assignedCount: number;
+  name?: string;
+  teamName?: string;
+  description?: string;
+  type?: string;
+  campaignId?: string;
+  campaignName?: string;
+  assignedCount?: number;
+  leadAgent?: string;
+  memberCount?: number;
   assignedUserIds?: string[];
   assignedUsers?: string[];
   status: 'Active' | 'Inactive';
@@ -185,12 +189,13 @@ export interface Campaign {
   id: string;
   tenantId: string;
   name: string;
+  campaign_name?: string;
   type: CampaignType;
   active: 'Yes' | 'No';
 
   // Outgoing Settings
   outboundCallerId: string;
-  didRotateStrategy: DIDRotateStrategy;
+  didRotateStrategy?: DIDRotateStrategy;
   didNumbers?: string[];
   dialStatuses?: string[];
   dial_ratio?: string;
@@ -200,8 +205,8 @@ export interface Campaign {
   amdDetection?: 'Disabled' | 'Standard AMD' | 'Aggressive AMD' | 'Silence Detection';
   maxConcurrentCalls?: number;
   retryRules?: RetryRules;
-  callMasking: boolean;
-  autoDispo: boolean;
+  callMasking?: boolean;
+  autoDispo?: boolean;
   autoDispoTimerSec?: number;
   autoDispoValue?: string;
   onDemandRecording?: boolean;
@@ -212,19 +217,19 @@ export interface Campaign {
   // Queue & Agent Settings
   queue?: string;
   mappedQueues?: string[];
-  pauseCodes: string[];
+  pauseCodes?: string[];
   dispositionStatuses?: string[];
   scriptName?: string;
   assignedUserGroup?: string;
   assignedTeamId?: string;
   assignedTeamName?: string;
   process?: ProcessType;
-  industry: string;
+  industry?: string;
   domain?: string;
   template_name?: string;
 
   // Incoming Call Settings (Allow / Block toggle)
-  inboundCallSetting: 'Allow' | 'Block';
+  inboundCallSetting?: 'Allow' | 'Block';
   inboundDid?: string;
   routingType?: InboundRoutingType;
   inboundTargetQueue?: string;
@@ -235,6 +240,14 @@ export interface Campaign {
   stickyAgentEnabled?: boolean;
 
   // Extra metadata & legacy compatibility
+  hopper_level?: number;
+  lead_order?: string;
+  hopperLeadsCount?: number;
+  autoHopperEnabled?: boolean;
+  leadsCount?: number;
+  status?: string;
+  direction?: string;
+  callerIdStrategy?: string;
   autoAnswer?: boolean;
   primaryList?: string;
   addQueue?: string;
@@ -411,6 +424,7 @@ export interface ActiveAgent {
   agentId?: string;
   name?: string;
   extension?: string;
+  station?: string;
   tenantId: string;
   agent?: string;
   agentName?: string;
@@ -431,9 +445,14 @@ export interface ActiveAgent {
   duration?: string;
   dialerStatus?: 'PAUSED' | 'INCALL' | 'CLOSER' | 'READY' | 'DISPO';
   customerName?: string;
+  connectedLead?: any;
   channels?: number;
   maxChannels?: number;
   viciAgentId?: string;
+  callsHandled?: number;
+  loginTime?: string;
+  lastActionTime?: string;
+  totalTalkTime?: string;
 }
 
 export interface LiveCall {

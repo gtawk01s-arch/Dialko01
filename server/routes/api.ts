@@ -8,7 +8,13 @@ export const apiRouter = Router();
 
 // Middleware to extract tenantId from header or query (default to 't-1')
 const getTenantId = (req: Request): string => {
-  return (req.headers['x-tenant-id'] as string) || (req.query.tenantId as string) || 't-1';
+  return (
+    (req.headers['x-tenant-id'] as string) ||
+    (req.query.tenantId as string) ||
+    (req.body && req.body.tenantId ? String(req.body.tenantId) : '') ||
+    (currentUserSession.user?.tenantId ? String(currentUserSession.user.tenantId) : '') ||
+    (db.tenants[0]?.id || 't-1')
+  );
 };
 
 // -------------------------------------------------------------
@@ -16,11 +22,11 @@ const getTenantId = (req: Request): string => {
 // -------------------------------------------------------------
 let currentUserSession: {
   user: any;
-  portal: 'admin' | 'agent';
+  portal: 'super-admin' | 'admin' | 'agent';
   isImpersonating: boolean;
   originalUser: any;
 } = {
-  user: db.users[0], // Default logged-in admin for initial bootstrap
+  user: null, // Start unauthenticated, real credentials required
   portal: 'admin',
   isImpersonating: false,
   originalUser: null
@@ -109,13 +115,19 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
     }
   }
 
-  // Check portal permissions
-  if (portal === 'admin') {
-    // Only Administrators, Supervisors, or Master/Super Admins can login to Admin portal
+  // Check portal-specific authorization
+  if (portal === 'super-admin') {
+    if (matchedUser.role !== 'SUPER_ADMIN' && matchedUser.role !== 'Master Admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access Denied: Only Master Super Administrator credentials can log in to the Master Super Admin Panel.'
+      });
+    }
+  } else if (portal === 'admin') {
     if (matchedUser.role === 'Agent') {
       return res.status(403).json({
         success: false,
-        error: 'Access Denied: Agent accounts are restricted to the Agent Portal URL (/agent). The Admin Panel requires Administrator credentials created in the Master Panel.'
+        error: 'Access Denied: Agent accounts cannot log in to the Client Admin Panel. Please use the dedicated Agent Station URL (/agent).'
       });
     }
   }
@@ -126,7 +138,7 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
   // Set session
   currentUserSession = {
     user: matchedUser,
-    portal: portal as 'admin' | 'agent',
+    portal: portal as 'super-admin' | 'admin' | 'agent',
     isImpersonating: false,
     originalUser: null
   };
@@ -316,85 +328,188 @@ apiRouter.get('/super-admin/dashboard-stats', (req: Request, res: Response) => {
   });
 });
 
-// 2. Company Management (All Tenants CRUD)
-apiRouter.get('/super-admin/companies', (req: Request, res: Response) => {
-  res.json(db.tenants);
-});
-
-apiRouter.post('/super-admin/companies', (req: Request, res: Response) => {
+// Helper function to provision a client tenant and its initial administrator, groups, campaign and queues
+function provisionTenantWithAdmin(data: any) {
   const {
     name,
     code,
     planType = 'Enterprise',
-    userLicenses = 15,
-    availableMinutes = 5000,
+    userLicenses = 10,
+    availableMinutes = 10000,
     subscriptionStart = new Date().toISOString().slice(0, 10),
     subscriptionEnd = '2027-12-31',
     primaryContactEmail = '',
     primaryContactPhone = '',
     adminUserId,
     adminPassword = 'Password@123'
-  } = req.body;
+  } = data;
 
   if (!name || !code) {
-    return res.status(400).json({ success: false, error: 'Company Name and Code are required' });
+    throw new Error('Client Name and Code are required');
   }
 
-  // Unique code check
-  const cleanCode = code.toLowerCase().replace(/\s+/g, '');
-  if (db.tenants.some(t => t.code.toLowerCase() === cleanCode)) {
-    return res.status(400).json({ success: false, error: 'A company with this partition code already exists' });
+  const cleanCode = String(code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (db.tenants.some(t => t.code.toUpperCase() === cleanCode)) {
+    throw new Error(`A client with code '${cleanCode}' already exists.`);
   }
 
-  const newTenantId = `t-${db.tenants.length + 1}`;
+  const newTenantId = `t-${Date.now()}`;
+  const licensesCount = Number(userLicenses) || Number(data.maxUsers) || 10;
+
   const newTenant = {
     id: newTenantId,
-    name,
+    name: String(name).trim(),
     code: cleanCode,
     status: 'active' as const,
-    userLicenses: Number(userLicenses),
-    availableMinutes: Number(availableMinutes),
-    viciUserGroup: `${cleanCode}_admin`,
-    espoTeam: `${cleanCode}_Sales_Team`,
+    userLicenses: licensesCount,
+    availableMinutes: Number(availableMinutes) || 10000,
+    viciUserGroup: `${cleanCode.toLowerCase()}_admin`,
+    espoTeam: `${name} Team`,
     createdAt: new Date().toISOString(),
     subscriptionStart,
     subscriptionEnd,
-    primaryContactEmail,
-    primaryContactPhone,
+    primaryContactEmail: primaryContactEmail || `admin@${cleanCode.toLowerCase()}.com`,
+    primaryContactPhone: primaryContactPhone || '9876543210',
     planType
   };
-
   db.tenants.push(newTenant);
 
-  // Automatically provision initial Tenant Administrator
-  const loginUserId = adminUserId ? String(adminUserId).trim() : `${cleanCode}_admin`;
+  // Automatically provision initial Client Administrator in db.users
+  const loginUserId = adminUserId ? String(adminUserId).trim() : `${cleanCode.toLowerCase()}_admin`;
   const newAdminUser = {
-    id: `u-${db.users.length + 1}`,
+    id: `u-${Date.now()}`,
     tenantId: newTenantId,
     userId: loginUserId,
     name: `${name} Administrator`,
-    mobileNumber: primaryContactPhone || '9480732000',
+    mobileNumber: newTenant.primaryContactPhone,
     mobileExtension: '1001',
     specificDid: '27001',
     password: adminPassword,
-    emailId: primaryContactEmail || `${loginUserId}@${cleanCode}.com`,
+    emailId: newTenant.primaryContactEmail,
     status: 'Active' as const,
     role: 'Administrator' as const,
-    userGroup: `${cleanCode}_admin`,
+    userGroup: `${cleanCode.toLowerCase()}_admin`,
     teamName: 'Management',
     viciAgentId: '1001',
-    espoUserId: `espo-${cleanCode}-admin`,
+    espoUserId: `espo-${cleanCode.toLowerCase()}-admin`,
     currentChannels: 1,
-    skills: ['Management', 'Sales']
+    skills: ['Management', 'Operations']
   };
-
   db.users.push(newAdminUser);
 
-  res.status(201).json({
-    success: true,
-    tenant: newTenant,
-    adminUser: newAdminUser
+  // Provision default user groups for this client
+  db.userGroups.push(
+    {
+      id: `ug-${Date.now()}-1`,
+      tenantId: newTenantId,
+      groupName: `${cleanCode.toLowerCase()}_admin`,
+      description: `${name} Administrative & Supervisor Group`,
+      isSupervisorPanel: true,
+      memberCount: 1,
+      status: 'Active',
+      permissions: {
+        groupName: `${cleanCode.toLowerCase()}_admin`,
+        realTime: true,
+        reports: true,
+        management: true,
+        connection: true,
+        configurations: true,
+        leads: true,
+        dashboard: true,
+        call: true,
+        template: true,
+        formBuilder: true,
+        customModule: true
+      }
+    },
+    {
+      id: `ug-${Date.now()}-2`,
+      tenantId: newTenantId,
+      groupName: `${cleanCode.toLowerCase()}_agent`,
+      description: `${name} Frontline Agent Calling Group`,
+      isSupervisorPanel: false,
+      memberCount: 0,
+      status: 'Active',
+      permissions: {
+        groupName: `${cleanCode.toLowerCase()}_agent`,
+        realTime: false,
+        reports: false,
+        management: false,
+        connection: true,
+        configurations: false,
+        leads: true,
+        dashboard: false,
+        call: true,
+        template: true,
+        formBuilder: false,
+        customModule: false
+      }
+    }
+  );
+
+  // Provision default campaign
+  db.campaigns.push({
+    id: `c-${Date.now()}`,
+    tenantId: newTenantId,
+    name: `${name} Sales Campaign`,
+    campaign_name: `${name} Sales Campaign`,
+    type: 'PREDICTIVE',
+    dial_ratio: '2.0',
+    hopper_level: 50,
+    lead_order: 'DOWN',
+    hopperLeadsCount: 15,
+    autoHopperEnabled: true,
+    leadsCount: 50,
+    active: 'Yes',
+    status: 'Active',
+    direction: 'Outbound',
+    outboundCallerId: '8005490671',
+    callerIdStrategy: 'Random'
   });
+
+  // Provision default queue
+  db.queues.push({
+    id: `q-${Date.now()}`,
+    tenantId: newTenantId,
+    queueName: `${cleanCode.toLowerCase()}_sales_queue`,
+    ringingStrategy: 'Random',
+    visitTimeoutSec: 30,
+    assignedAgents: [loginUserId],
+    description: `${name} Main Inbound/Outbound Sales Queue`,
+    musicOnHold: 'corporate_ambient_synth',
+    status: 'Active'
+  });
+
+  // Provision default team
+  db.teams.push({
+    id: `tm-${Date.now()}`,
+    tenantId: newTenantId,
+    teamName: `${name} Sales Team`,
+    description: `Primary frontline calling team for ${name}`,
+    leadAgent: loginUserId,
+    memberCount: 1,
+    status: 'Active'
+  });
+
+  return { tenant: newTenant, adminUser: newAdminUser };
+}
+
+// 2. Company / Client Management (All Tenants CRUD)
+apiRouter.get('/super-admin/companies', (req: Request, res: Response) => {
+  res.json(db.tenants);
+});
+
+apiRouter.post('/super-admin/companies', (req: Request, res: Response) => {
+  try {
+    const result = provisionTenantWithAdmin(req.body);
+    res.status(201).json({
+      success: true,
+      tenant: result.tenant,
+      adminUser: result.adminUser
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message || 'Failed to provision client' });
+  }
 });
 
 // Toggle Company Status (Activate / Deactivate)
@@ -1182,14 +1297,12 @@ apiRouter.get('/tenants', (req: Request, res: Response) => {
 });
 
 apiRouter.post('/tenants', (req: Request, res: Response) => {
-  const newTenant = {
-    id: `t-${db.tenants.length + 1}`,
-    ...req.body,
-    userLicenses: req.body.maxUsers ? Number(req.body.maxUsers) : (req.body.userLicenses ? Number(req.body.userLicenses) : 10),
-    createdAt: new Date().toISOString()
-  };
-  db.tenants.push(newTenant);
-  res.status(201).json(newTenant);
+  try {
+    const result = provisionTenantWithAdmin(req.body);
+    res.status(201).json(result.tenant);
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err.message || 'Failed to create client tenant' });
+  }
 });
 
 apiRouter.put('/tenants/:id', (req: Request, res: Response) => {
@@ -2132,28 +2245,88 @@ apiRouter.get('/users', (req: Request, res: Response) => {
 });
 
 apiRouter.post('/users', (req: Request, res: Response) => {
-  const tid = getTenantId(req);
+  const tid = req.body.tenantId || getTenantId(req);
+  const tenant = db.tenants.find(t => t.id === tid);
+
+  if (!tenant) {
+    return res.status(404).json({ success: false, error: `Client tenant '${tid}' was not found.` });
+  }
+
+  // Enforce Tenant License Limit
+  const maxLicenses = Number(tenant.userLicenses || tenant.maxUsers || 10);
+  const currentUsers = db.users.filter(u => u.tenantId === tid);
+
+  if (currentUsers.length >= maxLicenses) {
+    return res.status(400).json({
+      success: false,
+      error: `License limit exceeded! Client '${tenant.name}' has reached its maximum license capacity (${currentUsers.length}/${maxLicenses} user seats allocated). Please contact the Master Super Administrator to increase your user license quota.`
+    });
+  }
+
+  const rawUserId = (req.body.userId || '').trim();
+  if (!rawUserId) {
+    return res.status(400).json({ success: false, error: 'User ID / Username is required.' });
+  }
+
+  if (db.users.some(u => u.userId.toLowerCase() === rawUserId.toLowerCase())) {
+    return res.status(400).json({
+      success: false,
+      error: `User ID '${rawUserId}' already exists in the system. Please enter a unique Username / User ID.`
+    });
+  }
+
+  const role = (req.body.role || 'Agent') as 'Administrator' | 'Agent' | 'Supervisor' | 'Master Admin';
+  const defaultGroup = db.userGroups.find(g => g.tenantId === tid)?.groupName || `${tenant.code.toLowerCase()}_agent`;
+  const defaultTeam = db.teams.find(t => t.tenantId === tid)?.teamName || 'Sales Inbound';
+
   const newUser = {
     id: `u-${Date.now()}`,
     tenantId: tid,
-    userId: req.body.userId || `user_${Date.now().toString().slice(-4)}`,
+    userId: rawUserId,
     name: req.body.name || 'New User',
     mobileNumber: req.body.mobileNumber || '9480732000',
-    mobileExtension: req.body.mobileExtension || '1011',
+    mobileExtension: req.body.mobileExtension || `${1000 + currentUsers.length + 1}`,
     specificDid: req.body.specificDid || '',
     password: req.body.password || 'UserPassword@123',
-    emailId: req.body.emailId || 'agent@dialko.com',
+    emailId: req.body.emailId || `${rawUserId.toLowerCase()}@${tenant.code.toLowerCase()}.com`,
     status: (req.body.status || 'Active') as 'Active' | 'Inactive',
-    role: (req.body.role || 'Agent') as 'Administrator' | 'Agent' | 'Supervisor' | 'Master Admin',
-    userGroup: req.body.userGroup || 'somnathlead_agent',
-    teamName: req.body.teamName || 'Sales Inbound',
+    role,
+    userGroup: req.body.userGroup || defaultGroup,
+    teamName: req.body.teamName || defaultTeam,
     viciAgentId: `${Math.floor(Math.random() * 9000 + 1000)}`,
     espoUserId: `espo-u-${Date.now().toString().slice(-4)}`,
     currentChannels: 0,
     skills: req.body.skills || ['Sales']
   };
+
   db.users.unshift(newUser);
-  res.status(201).json(newUser);
+
+  // If this user is an Agent, register in activeAgents list
+  if (role === 'Agent') {
+    db.activeAgents.unshift({
+      id: `ag-${Date.now()}`,
+      tenantId: tid,
+      agentId: newUser.userId,
+      agentName: newUser.name,
+      station: newUser.mobileExtension,
+      status: 'Ready',
+      callState: 'IDLE',
+      currentCampaign: db.campaigns.find(c => c.tenantId === tid)?.name || 'Standard Campaign',
+      queue: `${tenant.code.toLowerCase()}_sales_queue`,
+      callsToday: 0,
+      duration: '00:00:00',
+      connectedLead: null,
+      lastActionTime: new Date().toLocaleTimeString()
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    user: newUser,
+    remainingLicenses: Math.max(0, maxLicenses - (currentUsers.length + 1)),
+    totalAllocated: maxLicenses,
+    usedLicenses: currentUsers.length + 1
+  });
 });
 
 apiRouter.put('/users/:id', (req: Request, res: Response) => {

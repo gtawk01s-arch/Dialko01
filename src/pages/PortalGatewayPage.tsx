@@ -118,13 +118,10 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
                 <span>Launch Super Admin URL</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <div className="text-[10px] text-slate-400 text-center font-mono">
-                Default: <span className="text-indigo-300">superadmin</span> / <span className="text-indigo-300">SuperAdminMaster@2026</span>
-              </div>
             </div>
           </div>
 
-          {/* 2. Tenant Admin Panel Card */}
+          {/* 2. Client Admin Panel Card */}
           <div
             id="gateway-admin-card"
             className="group bg-slate-800/70 hover:bg-slate-800 border border-blue-500/30 hover:border-blue-500 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between shadow-xl hover:shadow-blue-500/10 relative overflow-hidden"
@@ -142,10 +139,10 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
               </div>
 
               <h3 className="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
-                Tenant Admin Panel
+                Client Admin Panel
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                Client company management console. Create agent IDs, configure campaigns, lists, queues, IVRs, and monitor live calls for your organization.
+                Client company management console. Create agent IDs, configure campaigns, lists, queues, IVRs, and monitor live calls for your client.
               </p>
 
               <ul className="space-y-1.5 text-xs text-slate-300 mb-6">
@@ -177,9 +174,6 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
                 <span>Launch Admin Panel URL</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <div className="text-[10px] text-slate-400 text-center font-mono">
-                Default: <span className="text-blue-300">somnathlead_admin</span> / <span className="text-blue-300">AdminPassword@123</span>
-              </div>
             </div>
           </div>
 
@@ -236,9 +230,6 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
                 <span>Launch Agent Softphone URL</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-              <div className="text-[10px] text-slate-400 text-center font-mono">
-                Default: <span className="text-emerald-300">somnathlead_agent01</span> / <span className="text-emerald-300">AgentPass#1002</span>
-              </div>
             </div>
           </div>
 

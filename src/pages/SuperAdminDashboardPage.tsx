@@ -593,7 +593,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
     try {
       const targetTenant = drilldownData?.tenant || {
         id: selectedTenantId || 't-1',
-        name: 'Client Organization',
+        name: 'Client',
         code: 'TENANT'
       } as Tenant;
 
@@ -2193,29 +2193,44 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                       code: newCompanyForm.code,
                       planType: newCompanyForm.planType,
                       userLicenses: Number(newCompanyForm.userLicenses) || 10,
-                      viciUserGroup: `${newCompanyForm.code.toLowerCase()}_agent`,
+                      adminUserId: newCompanyForm.adminUserId || `${newCompanyForm.code.toLowerCase()}_admin`,
+                      adminPassword: newCompanyForm.adminPassword || 'Password@123',
+                      primaryContactEmail: newCompanyForm.primaryContactEmail,
+                      viciUserGroup: `${newCompanyForm.code.toLowerCase()}_admin`,
                       espoTeam: `${newCompanyForm.name} Team`,
                       subscriptionEnd: newCompanyForm.subscriptionEnd
                     })
                   });
+                  const resData = await res.json();
                   if (res.ok) {
-                    showToast(`Tenant "${newCompanyForm.name}" created successfully with ${newCompanyForm.userLicenses} agent seats.`);
+                    showToast(`Client "${newCompanyForm.name}" provisioned successfully with ${newCompanyForm.userLicenses} licenses! Admin User ID: ${newCompanyForm.adminUserId || `${newCompanyForm.code.toLowerCase()}_admin`}`);
                     setIsNewCompanyOpen(false);
                     loadTenantsSummary();
+                  } else {
+                    showToast(resData.error || 'Failed to provision client');
                   }
-                } catch (err) {
-                  showToast('Failed to provision tenant');
+                } catch (err: any) {
+                  showToast(err.message || 'Failed to provision client');
                 }
               }}
               className="space-y-3"
             >
               <div>
-                <label className="block text-slate-400 mb-1">Company Name *</label>
+                <label className="block text-slate-300 font-bold mb-1">Client Name *</label>
                 <input
                   required
                   type="text"
                   value={newCompanyForm.name}
-                  onChange={e => setNewCompanyForm({ ...newCompanyForm, name: e.target.value })}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const autoCode = val.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+                    setNewCompanyForm({
+                      ...newCompanyForm,
+                      name: val,
+                      code: newCompanyForm.code || autoCode,
+                      adminUserId: newCompanyForm.adminUserId || (autoCode ? `${autoCode.toLowerCase()}_admin` : '')
+                    });
+                  }}
                   placeholder="e.g. Apex Global BPO"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
                 />
@@ -2223,12 +2238,19 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Tenant Code *</label>
+                  <label className="block text-slate-400 mb-1">Client Code *</label>
                   <input
                     required
                     type="text"
                     value={newCompanyForm.code}
-                    onChange={e => setNewCompanyForm({ ...newCompanyForm, code: e.target.value.toUpperCase() })}
+                    onChange={e => {
+                      const c = e.target.value.toUpperCase();
+                      setNewCompanyForm({
+                        ...newCompanyForm,
+                        code: c,
+                        adminUserId: `${c.toLowerCase()}_admin`
+                      });
+                    }}
                     placeholder="e.g. APEXBPO"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500 font-mono"
                   />
@@ -2247,10 +2269,11 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                 </div>
               </div>
 
+              {/* License Count / Max Users */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-bold mb-1">
-                    Number of Agents Wanted *
+                    User Licenses (Seat Quota) *
                   </label>
                   <input
                     required
@@ -2262,8 +2285,8 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                     placeholder="e.g. 15"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-emerald-300 font-mono font-bold outline-indigo-500"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Allocated agent seats (can be edited later anytime).
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Number of users = license count. The Client Admin can only create users up to this limit.
                   </p>
                 </div>
                 <div>
@@ -2273,6 +2296,48 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                     value={newCompanyForm.subscriptionEnd}
                     onChange={e => setNewCompanyForm({ ...newCompanyForm, subscriptionEnd: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Initial Client Admin Account Details */}
+              <div className="pt-2 border-t border-slate-800 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-indigo-400 font-bold text-[11px]">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Initial Client Admin Credentials (for /admin panel)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-400 mb-1">Admin Username *</label>
+                    <input
+                      required
+                      type="text"
+                      value={newCompanyForm.adminUserId}
+                      onChange={e => setNewCompanyForm({ ...newCompanyForm, adminUserId: e.target.value })}
+                      placeholder="e.g. apexbpo_admin"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-indigo-500 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1">Admin Password *</label>
+                    <input
+                      required
+                      type="text"
+                      value={newCompanyForm.adminPassword}
+                      onChange={e => setNewCompanyForm({ ...newCompanyForm, adminPassword: e.target.value })}
+                      placeholder="e.g. Password@123"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-indigo-500 font-mono"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Primary Contact Email</label>
+                  <input
+                    type="email"
+                    value={newCompanyForm.primaryContactEmail}
+                    onChange={e => setNewCompanyForm({ ...newCompanyForm, primaryContactEmail: e.target.value })}
+                    placeholder="admin@client.com"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-white outline-indigo-500"
                   />
                 </div>
               </div>
@@ -2289,7 +2354,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                   type="submit"
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold cursor-pointer"
                 >
-                  Create Tenant Partition
+                  Provision Client
                 </button>
               </div>
             </form>
@@ -2485,7 +2550,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
                 {/* Target Client Tenant */}
                 <div className="md:col-span-2">
                   <label className="block text-slate-300 font-bold mb-1">
-                    Client Tenant Organization *
+                    Client Tenant *
                   </label>
                   <select
                     required

@@ -6,7 +6,9 @@ import { AudioPlayerModal } from './components/AudioPlayerModal.js';
 
 // Auth & Portal Views
 import { PortalGatewayPage } from './pages/PortalGatewayPage.js';
-import { LoginPage } from './pages/LoginPage.js';
+import { SuperAdminLoginPage } from './pages/SuperAdminLoginPage.js';
+import { ClientAdminLoginPage } from './pages/ClientAdminLoginPage.js';
+import { AgentLoginPage } from './pages/AgentLoginPage.js';
 import { AgentWorkspacePage } from './pages/AgentWorkspacePage.js';
 
 // Admin Page Views
@@ -35,7 +37,7 @@ export default function App() {
   const [tenants, setTenants] = React.useState<Tenant[]>([]);
   const [activeTenant, setActiveTenant] = React.useState<Tenant>({
     id: '',
-    name: 'No Organization Provisioned',
+    name: 'No Client Provisioned',
     code: '',
     status: 'active',
     userLicenses: 0,
@@ -55,24 +57,11 @@ export default function App() {
       if (path === '/admin' || path.startsWith('/admin/') || search.includes('portal=admin')) return 'admin';
       if (path === '/' || path === '') return 'gateway';
     }
-    return 'super-admin';
+    return 'gateway';
   });
 
-  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(true);
-  const [currentUser, setCurrentUser] = React.useState<User | null>({
-    id: 'u-super-1',
-    tenantId: '',
-    userId: 'superadmin',
-    name: 'Dialko Master Administrator',
-    emailId: 'superadmin@dialko.com',
-    mobileNumber: '9999999999',
-    mobileExtension: '9999',
-    status: 'Active',
-    role: 'SUPER_ADMIN',
-    userGroup: 'SUPER_ADMIN_GROUP',
-    currentChannels: 5,
-    skills: ['Master Admin', 'Dialko Telephony']
-  });
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(false);
+  const [currentUser, setCurrentUser] = React.useState<User | null>(null);
 
   const [activePage, setActivePage] = React.useState('dashboard');
   const [activeSubPage, setActiveSubPage] = React.useState<string | undefined>();
@@ -268,14 +257,32 @@ export default function App() {
 
   // 2. Unauthenticated: Show dedicated login page for the active URL portal
   if (!isAuthenticated || !currentUser) {
+    if (portalMode === 'super-admin') {
+      return (
+        <SuperAdminLoginPage
+          onLoginSuccess={(user, portal, tenant) => {
+            handleLoginSuccess(user, portal, tenant);
+          }}
+        />
+      );
+    }
+    if (portalMode === 'agent') {
+      return (
+        <AgentLoginPage
+          tenants={tenants}
+          activeTenant={activeTenant}
+          onSelectTenant={handleSelectTenant}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      );
+    }
+    // Default to dedicated Client Admin LoginPage for /admin or direct access
     return (
-      <LoginPage
-        portal={portalMode}
+      <ClientAdminLoginPage
         tenants={tenants}
         activeTenant={activeTenant}
         onSelectTenant={handleSelectTenant}
         onLoginSuccess={handleLoginSuccess}
-        onSwitchPortal={handleSwitchPortal}
       />
     );
   }

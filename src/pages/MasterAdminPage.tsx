@@ -86,7 +86,7 @@ export const MasterAdminPage: React.FC<MasterAdminPageProps> = ({
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-800">Master Admin & Multi-Client Management</h2>
-            <span className="text-[11px] text-slate-500">Client organization provisioning, license quotas, telephony minutes, and cluster sync</span>
+            <span className="text-[11px] text-slate-500">Client provisioning, license quotas, telephony minutes, and cluster sync</span>
           </div>
         </div>
 
@@ -172,7 +172,7 @@ export const MasterAdminPage: React.FC<MasterAdminPageProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95">
             <div className="px-5 py-3.5 bg-[#0284c7] text-white flex items-center justify-between">
-              <h3 className="font-bold text-sm">Provision New Client / Organization</h3>
+              <h3 className="font-bold text-sm">Provision New Client</h3>
               <button onClick={() => setIsAddTenantOpen(false)} className="p-1 hover:bg-white/20 rounded">
                 <X className="w-4 h-4" />
               </button>
@@ -180,7 +180,7 @@ export const MasterAdminPage: React.FC<MasterAdminPageProps> = ({
 
             <form onSubmit={handleCreateTenant} className="p-5 space-y-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Company / Organization Name *</label>
+                <label className="block text-slate-700 font-bold mb-1">Client / Company Name *</label>
                 <input
                   type="text"
                   required

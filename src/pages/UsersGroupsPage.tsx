@@ -28,11 +28,13 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
   const [users, setUsers] = React.useState<User[]>([]);
   const [userGroups, setUserGroups] = React.useState<UserGroupItem[]>([]);
   const [permissions, setPermissions] = React.useState<UserGroupPermission[]>([]);
+  const [teams, setTeams] = React.useState<any[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [activeTab, setActiveTab] = React.useState<'users' | 'groups' | 'permissions'>('users');
   
   // Modals
   const [isAddUserModalOpen, setIsAddUserModalOpen] = React.useState(false);
+  const [createUserError, setCreateUserError] = React.useState<string | null>(null);
   const [isEditUserModalOpen, setIsEditUserModalOpen] = React.useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = React.useState(false);
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = React.useState(false);
@@ -53,7 +55,7 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
     emailId: '',
     status: 'Active' as 'Active' | 'Inactive',
     role: 'Agent' as 'Administrator' | 'Agent' | 'Supervisor',
-    userGroup: 'somnathlead_admin',
+    userGroup: '',
     teamName: 'Sales Inbound'
   });
 
@@ -67,7 +69,7 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
     emailId: '',
     status: 'Active' as 'Active' | 'Inactive',
     role: 'Agent' as 'Administrator' | 'Agent' | 'Supervisor',
-    userGroup: 'somnathlead_admin',
+    userGroup: '',
     teamName: 'Sales Inbound'
   });
 
@@ -100,17 +102,20 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
 
   const fetchData = async () => {
     try {
-      const [usersRes, permsRes, groupsRes] = await Promise.all([
+      const [usersRes, permsRes, groupsRes, teamsRes] = await Promise.all([
         fetch(`/api/users?tenantId=${activeTenant.id}`),
         fetch('/api/user-groups/permissions'),
-        fetch(`/api/user-groups?tenantId=${activeTenant.id}`)
+        fetch(`/api/user-groups?tenantId=${activeTenant.id}`),
+        fetch(`/api/teams?tenantId=${activeTenant.id}`)
       ]);
       const usersData = await usersRes.json();
       const permsData = await permsRes.json();
       const groupsData = await groupsRes.json();
-      setUsers(usersData);
-      setPermissions(permsData);
-      setUserGroups(groupsData);
+      const teamsData = await teamsRes.json();
+      if (Array.isArray(usersData)) setUsers(usersData);
+      if (Array.isArray(permsData)) setPermissions(permsData);
+      if (Array.isArray(groupsData)) setUserGroups(groupsData);
+      if (Array.isArray(teamsData)) setTeams(teamsData);
     } catch (err) {
       console.error('Failed to load users & groups', err);
     }
@@ -120,31 +125,51 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
     fetchData();
   }, [activeTenant.id]);
 
+  const handleOpenAddUser = () => {
+    setCreateUserError(null);
+    const defaultGroup = userGroups[0]?.groupName || `${activeTenant.code?.toLowerCase() || 'client'}_agent`;
+    const defaultTeam = teams[0]?.teamName || 'Sales Inbound';
+    setNewUserForm({
+      userId: '',
+      name: '',
+      mobileNumber: '',
+      mobileExtension: `${1000 + users.length + 1}`,
+      specificDid: '',
+      password: '',
+      emailId: '',
+      status: 'Active',
+      role: 'Agent',
+      userGroup: defaultGroup,
+      teamName: defaultTeam
+    });
+    setIsAddUserModalOpen(true);
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCreateUserError(null);
     try {
-      await fetch('/api/users', {
+      const res = await fetch('/api/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenant.id },
-        body: JSON.stringify(newUserForm)
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': activeTenant.id
+        },
+        body: JSON.stringify({
+          ...newUserForm,
+          tenantId: activeTenant.id
+        })
       });
+      const data = await res.json();
+      if (!res.ok || data.success === false || data.error) {
+        setCreateUserError(data.error || 'Failed to create user');
+        return;
+      }
       setIsAddUserModalOpen(false);
-      setNewUserForm({
-        userId: '',
-        name: '',
-        mobileNumber: '',
-        mobileExtension: '',
-        specificDid: '',
-        password: '',
-        emailId: '',
-        status: 'Active',
-        role: 'Agent',
-        userGroup: 'somnathlead_admin',
-        teamName: 'Sales Inbound'
-      });
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create user', err);
+      setCreateUserError(err.message || 'Error occurred while creating user');
     }
   };
 
@@ -348,13 +373,28 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
           </div>
 
           {activeTab === 'users' && (
-            <button
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-xs cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add User
-            </button>
+            <div className="flex items-center gap-2">
+              <div
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold border flex items-center gap-1.5 ${
+                  users.length >= (activeTenant.userLicenses || 10)
+                    ? 'bg-rose-50 border-rose-200 text-rose-700'
+                    : 'bg-slate-100 border-slate-200 text-slate-700'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5 text-blue-600" />
+                <span>Licenses: <strong>{users.length}</strong> / {activeTenant.userLicenses || 10} Used</span>
+                {users.length >= (activeTenant.userLicenses || 10) && (
+                  <span className="text-[9px] font-black uppercase bg-rose-600 text-white px-1 py-0.2 rounded">Limit Reached</span>
+                )}
+              </div>
+              <button
+                onClick={handleOpenAddUser}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add User
+              </button>
+            </div>
           )}
 
           {activeTab === 'groups' && (
@@ -615,7 +655,10 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <div className="px-5 py-3.5 bg-blue-600 text-white flex items-center justify-between">
-              <h3 className="font-bold text-sm">Add New User / Agent</h3>
+              <div>
+                <h3 className="font-bold text-sm">Add New User / Agent</h3>
+                <p className="text-[11px] text-blue-100">Client: {activeTenant.name} ({activeTenant.code})</p>
+              </div>
               <button
                 onClick={() => setIsAddUserModalOpen(false)}
                 className="p-1 hover:bg-white/20 rounded transition cursor-pointer"
@@ -624,7 +667,42 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3 text-xs">
+            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5 text-xs">
+              {/* License quota banner */}
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span>Client License Quota:</span>
+                  <span className="font-bold text-slate-900">{users.length} / {activeTenant.userLicenses || 10} Allocated</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded font-semibold text-[11px] ${
+                  users.length >= (activeTenant.userLicenses || 10) ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {Math.max(0, (activeTenant.userLicenses || 10) - users.length)} Remaining
+                </span>
+              </div>
+
+              {/* Error message alert */}
+              {createUserError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2.5 text-xs text-rose-700 font-medium">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <span className="font-bold block">User Creation Blocked</span>
+                    <span>{createUserError}</span>
+                  </div>
+                </div>
+              )}
+
+              {users.length >= (activeTenant.userLicenses || 10) && (
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-2.5 text-xs text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">License Limit Reached</span>
+                    <span>All {activeTenant.userLicenses || 10} user licenses allocated by the Master Super Admin are occupied. To add more users, request a license quota increase from the Super Admin panel.</span>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">User ID / Username *</label>
@@ -663,7 +741,7 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Specific DID (For Agent DID Rotate)</label>
+                  <label className="block text-slate-700 font-bold mb-1">Specific DID (Optional)</label>
                   <input
                     type="text"
                     placeholder="e.g. 918045678905"
@@ -681,7 +759,7 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
                   <input
                     type="email"
                     required
-                    placeholder="rachel@zeedial.com"
+                    placeholder={`agent@${activeTenant.code?.toLowerCase() || 'client'}.com`}
                     value={newUserForm.emailId}
                     onChange={e => setNewUserForm({ ...newUserForm, emailId: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded p-2"
@@ -720,9 +798,14 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
                     onChange={e => setNewUserForm({ ...newUserForm, userGroup: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded p-2"
                   >
-                    <option value="somnathlead_admin">somnathlead_admin</option>
-                    <option value="supervisor_panel">supervisor_panel</option>
-                    <option value="support_tier1">support_tier1</option>
+                    {userGroups.map(g => (
+                      <option key={g.id} value={g.groupName}>{g.groupName}</option>
+                    ))}
+                    {userGroups.length === 0 && (
+                      <option value={`${activeTenant.code?.toLowerCase() || 'client'}_agent`}>
+                        {activeTenant.code?.toLowerCase() || 'client'}_agent
+                      </option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -732,9 +815,12 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
                     onChange={e => setNewUserForm({ ...newUserForm, teamName: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded p-2"
                   >
-                    <option value="Sales Inbound">Sales Inbound</option>
-                    <option value="HNI Wealth Direct">HNI Wealth Direct</option>
-                    <option value="Technical Support">Technical Support</option>
+                    {teams.map((t: any) => (
+                      <option key={t.id} value={t.teamName}>{t.teamName}</option>
+                    ))}
+                    {teams.length === 0 && (
+                      <option value="Sales Inbound">Sales Inbound</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -749,7 +835,12 @@ export const UsersGroupsPage: React.FC<UsersGroupsPageProps> = ({ activeTenant, 
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold shadow-xs cursor-pointer"
+                  disabled={users.length >= (activeTenant.userLicenses || 10)}
+                  className={`px-5 py-2 rounded font-bold shadow-xs transition cursor-pointer ${
+                    users.length >= (activeTenant.userLicenses || 10)
+                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  }`}
                 >
                   Create User
                 </button>

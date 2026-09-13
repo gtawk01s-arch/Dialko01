@@ -73,9 +73,22 @@ class InMemoryDB {
   activeAgents: ActiveAgent[] = [];
   liveCalls: LiveCall[] = [];
   queueItems: QueueItem[] = [];
+  get queues(): QueueItem[] { return this.queueItems; }
+  set queues(val: QueueItem[]) { this.queueItems = val; }
+
   dispositionItems: DispositionItem[] = [];
+  get dispositions(): DispositionItem[] { return this.dispositionItems; }
+  set dispositions(val: DispositionItem[]) { this.dispositionItems = val; }
+
   pauseCodeItems: PauseCodeItem[] = [];
+  get pauseCodes(): PauseCodeItem[] { return this.pauseCodeItems; }
+  set pauseCodes(val: PauseCodeItem[]) { this.pauseCodeItems = val; }
+
   didItems: DIDItem[] = [];
+  get dids(): DIDItem[] { return this.didItems; }
+  set dids(val: DIDItem[]) { this.didItems = val; }
+
+  userGroupPermissions: any[] = [];
   blockedNumbers: BlockedNumberItem[] = [];
   inboundRoutes: InboundRouteRule[] = [];
   stickyAgentRules: StickyAgentRule[] = [];
@@ -108,6 +121,11 @@ class InMemoryDB {
     this.campaignLists = [];
     this.userGroups = [];
     this.teams = [];
+    this.queueItems = [];
+    this.dispositionItems = [];
+    this.pauseCodeItems = [];
+    this.didItems = [];
+    this.userGroupPermissions = [];
   }
 }
 

@@ -144,7 +144,7 @@ export const ImpersonationReasonModal: React.FC<ImpersonationReasonModalProps> =
           {/* Target Metadata Summary */}
           <div className="bg-slate-100 rounded-xl p-3 grid grid-cols-2 gap-2 text-[11px] text-slate-600 border border-slate-200">
             <div>
-              <span className="text-slate-400 block">Tenant Organization:</span>
+              <span className="text-slate-400 block">Client Tenant:</span>
               <strong className="text-slate-800">{targetTenant?.name || targetAgent.tenantId}</strong>
             </div>
             <div>

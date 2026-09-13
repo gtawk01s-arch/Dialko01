@@ -1652,7 +1652,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
                   <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-100">
                     <h4 className="font-bold text-emerald-900 text-xs uppercase tracking-wider mb-1">3. Qualification & Close</h4>
                     <p className="text-xs leading-relaxed text-slate-700">
-                      "How many calling seats are currently active at your organization? We would love to set up a 15-minute live platform demonstration for your team."
+                      "How many calling seats are currently active at your company? We would love to set up a 15-minute live platform demonstration for your team."
                     </p>
                   </div>
                 </div>
