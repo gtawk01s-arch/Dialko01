@@ -1,0 +1,6 @@
+{
+  "name": "Zeedial Multi-Tenant SaaS Telephony System",
+  "description": "Master SaaS Super Admin, Tenant Admin Console, and Agent Softphone Telephony & CRM with Multi-Tenancy.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
