@@ -14,7 +14,7 @@ async function startServer() {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'Zeedial Enterprise Dial Server', time: new Date().toISOString() });
+    res.json({ status: 'ok', service: 'Dialko Enterprise Dial Server', time: new Date().toISOString() });
   });
 
   // Vite middleware for development vs static build in production
@@ -33,7 +33,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Zeedial Admin Server running on http://localhost:${PORT}`);
+    console.log(`Dialko Admin Server running on http://localhost:${PORT}`);
   });
 }
 

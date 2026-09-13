@@ -31,8 +31,8 @@ export const SMSTriggersPage: React.FC<SMSTriggersPageProps> = ({ activeTenant }
   // Forms
   const [templateForm, setTemplateForm] = React.useState({
     name: '',
-    senderId: 'ZEEDIAL',
-    content: 'Hi {CUSTOMER_NAME}, thank you for speaking with Zeedial. Here is your reference #{TICKET_ID}.'
+    senderId: 'DIALKO',
+    content: 'Hi {CUSTOMER_NAME}, thank you for speaking with Dialko. Here is your reference #{TICKET_ID}.'
   });
 
   const [triggerForm, setTriggerForm] = React.useState({
@@ -99,7 +99,7 @@ export const SMSTriggersPage: React.FC<SMSTriggersPageProps> = ({ activeTenant }
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': activeTenant.id },
         body: JSON.stringify({
           recipient: testSendForm.phoneNumber,
-          message: selectedT?.content || 'Test SMS message from Zeedial gateway.',
+          message: selectedT?.content || 'Test SMS message from Dialko gateway.',
           templateId: testSendForm.templateId,
           triggeredBy: 'Manual Admin Test'
         })

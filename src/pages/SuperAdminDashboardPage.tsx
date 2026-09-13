@@ -159,7 +159,6 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
     role: 'Administrator' as 'Administrator' | 'Supervisor',
     status: 'Active' as 'Active' | 'Inactive',
     provisionedBy: 'DEVELOPER_TEAM' as 'DEVELOPER_TEAM' | 'SUPPORT_TEAM',
-    ticketRef: 'DEV-ONBOARD-901',
     notes: 'Provisioned by Developer Team for tenant administration',
     specificDid: '27001'
   });
@@ -167,7 +166,6 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
   const [isResetAdminPassModalOpen, setIsResetAdminPassModalOpen] = useState(false);
   const [adminUserForPasswordReset, setAdminUserForPasswordReset] = useState<EnrichedAdminCredential | null>(null);
   const [adminResetNewPassword, setAdminResetNewPassword] = useState('');
-  const [adminResetTicketRef, setAdminResetTicketRef] = useState('SUP-RESET-01');
 
   const [isEditAdminModalOpen, setIsEditAdminModalOpen] = useState(false);
   const [editingAdminUser, setEditingAdminUser] = useState<EnrichedAdminCredential | null>(null);
@@ -218,6 +216,19 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
     adminPassword: 'Password@123'
   });
 
+  // Edit Tenant / Agent Seats Modal State
+  const [isEditTenantOpen, setIsEditTenantOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<{
+    id: string;
+    name: string;
+    code: string;
+    planType: string;
+    userLicenses: number;
+    availableMinutes: number;
+    subscriptionEnd: string;
+    status: 'active' | 'inactive';
+  } | null>(null);
+
   // Global Infrastructure Config
   const [infraConfig, setInfraConfig] = useState<SystemInfrastructureConfig>({
     viciDbHost: '192.168.1.11',
@@ -228,9 +239,9 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
     viciApiUrl: 'http://192.168.1.11/vicidial/non_agent_api.php',
     viciApiUser: '6666_api_master',
     viciApiPassword: '••••••••••••',
-    espoApiUrl: 'https://crm.zeedial.internal/api/v1',
+    espoApiUrl: 'https://crm.dialko.internal/api/v1',
     espoApiKey: '••••••••••••',
-    carrierSipTrunk: 'sbc-us-east.zeedial-sip.net:5060',
+    carrierSipTrunk: 'sbc-us-east.dialko-sip.net:5060',
     maxConcurrentChannels: 120,
     status: 'Connected',
     lastConnectedTime: new Date().toISOString()
@@ -239,6 +250,61 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleUpdateTenantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant) return;
+    try {
+      const res = await fetch(`/api/tenants/${editingTenant.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingTenant.name,
+          code: editingTenant.code,
+          planType: editingTenant.planType,
+          userLicenses: Number(editingTenant.userLicenses),
+          status: editingTenant.status,
+          subscriptionEnd: editingTenant.subscriptionEnd
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Tenant "${editingTenant.name}" updated successfully. Agent quota set to ${editingTenant.userLicenses} seats.`);
+        setIsEditTenantOpen(false);
+        setEditingTenant(null);
+        loadTenantsSummary();
+        if (selectedTenantId) {
+          loadDrilldown(selectedTenantId);
+        }
+      } else {
+        showToast(data.error || 'Failed to update tenant');
+      }
+    } catch (err) {
+      showToast('Error updating tenant');
+    }
+  };
+
+  const handleToggleTenantStatus = async (tenantId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        showToast(`Tenant status updated to ${newStatus.toUpperCase()}`);
+        loadTenantsSummary();
+        if (selectedTenantId) {
+          loadDrilldown(selectedTenantId);
+        }
+      } else {
+        showToast('Failed to toggle status');
+      }
+    } catch (err) {
+      showToast('Error updating tenant status');
+    }
   };
 
   // Initial Data Fetch
@@ -320,7 +386,7 @@ export const SuperAdminDashboardPage: React.FC<SuperAdminDashboardPageProps> = (
 
   const handleCopyCredentialPack = (admin: EnrichedAdminCredential) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    const pack = `=== ZEEDIAL TENANT ADMIN CREDENTIALS ===
+    const pack = `=== DIALKO TENANT ADMIN CREDENTIALS ===
 Tenant Name: ${admin.tenantName} (${admin.tenantCode})
 Admin Portal URL: ${origin}/admin
 Username / User ID: ${admin.userId}
@@ -328,7 +394,7 @@ Password: ${admin.password || 'AdminPassword@123'}
 SIP Extension: ${admin.mobileExtension}
 Role: ${admin.role}
 Access Status: ${admin.status} (${admin.canLoginToAdminPanel ? 'Authorized to login' : 'Blocked from login'})
-Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef || 'DEV-ONBOARD'})
+Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'}
 ========================================`;
     navigator.clipboard.writeText(pack);
     showToast(`Copied credentials for '${admin.userId}' to clipboard!`);
@@ -376,7 +442,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
           role: 'Administrator',
           status: 'Active',
           provisionedBy: 'DEVELOPER_TEAM',
-          ticketRef: 'DEV-REQ-' + Math.floor(1000 + Math.random() * 9000),
           notes: '',
           specificDid: '27001'
         });
@@ -396,8 +461,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          newPassword: adminResetNewPassword.trim(),
-          ticketRef: adminResetTicketRef.trim()
+          newPassword: adminResetNewPassword.trim()
         })
       });
       const data = await res.json();
@@ -429,7 +493,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
           mobileExtension: editingAdminUser.mobileExtension,
           role: editingAdminUser.role,
           status: editingAdminUser.status,
-          ticketRef: editingAdminUser.ticketRef,
           notes: editingAdminUser.notes
         })
       });
@@ -511,7 +574,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
       name: agent.name,
       mobileNumber: agent.phone || '9480732001',
       mobileExtension: agent.extension || '1002',
-      emailId: agent.email || `${agent.userId}@zeedial.com`,
+      emailId: agent.email || `${agent.userId}@dialko.com`,
       status: 'Active',
       role: 'Agent',
       userGroup: drilldownData?.tenant.viciUserGroup || 'somnathlead_agent',
@@ -631,7 +694,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
       admin.emailId.toLowerCase().includes(q) ||
       admin.mobileExtension.includes(q) ||
       admin.tenantName.toLowerCase().includes(q) ||
-      (admin.ticketRef && admin.ticketRef.toLowerCase().includes(q)) ||
       (admin.notes && admin.notes.toLowerCase().includes(q));
 
     const matchesTenant = credentialTenantFilter === 'ALL' || admin.tenantId === credentialTenantFilter;
@@ -658,13 +720,13 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-800 flex items-center justify-center text-white font-black text-lg shadow-lg border border-indigo-400/30">
-            ZD
+            DK
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-black text-base text-white tracking-tight">ZeeDial Cloud Master Controller</h1>
+              <h1 className="font-black text-base text-white tracking-tight">Dialko Cloud Master Controller</h1>
               <span className="bg-indigo-950 text-indigo-300 border border-indigo-700/50 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
-                Super Admin
+                Master Admin
               </span>
             </div>
             <p className="text-[11px] text-slate-400 flex items-center gap-2">
@@ -676,16 +738,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Quick jump to Tenant Admin URL */}
-          <button
-            onClick={onOpenAdminPanel}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
-            title="Open Tenant Administrator Portal (/admin)"
-          >
-            <Building2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>Open Admin Panel (/admin)</span>
-          </button>
-
           {/* Master Admin Profile */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700/60 text-xs">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -712,7 +764,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>Tenant Matrix & Live Status (4B.1)</span>
+          <span>Client Matrix & Live Status</span>
           <span className="bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded-md text-[10px] font-mono">
             {tenantsSummary.length}
           </span>
@@ -742,22 +794,10 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
           }`}
         >
           <ShieldAlert className="w-4 h-4 text-amber-400" />
-          <span>Impersonation Audit Trail (4B.4)</span>
+          <span>Impersonation Audit Trail</span>
           <span className="bg-amber-950 text-amber-300 border border-amber-800/50 px-1.5 py-0.2 rounded-md text-[10px] font-mono">
             {impersonationLogs.length}
           </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-            activeTab === 'security'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Security Architecture & Comparison (4B.3 & 4B.5)</span>
         </button>
 
         <button
@@ -928,12 +968,32 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                           title="Toggle whether supervisor receives an audit alert when admin impersonates an agent"
                         >
                           <Bell className="w-3 h-3" />
-                          <span>Notify Sup: {tenant.notifySupervisorOnImpersonate ? 'ON' : 'OFF'}</span>
+                          <span>Notify: {tenant.notifySupervisorOnImpersonate ? 'ON' : 'OFF'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setEditingTenant({
+                              id: tenant.id,
+                              name: tenant.name,
+                              code: tenant.code,
+                              planType: tenant.planType || 'Enterprise',
+                              userLicenses: tenant.userLicenses || 15,
+                              availableMinutes: tenant.availableMinutes || 10000,
+                              subscriptionEnd: tenant.subscriptionEnd || '2027-12-31',
+                              status: tenant.status as 'active' | 'inactive'
+                            });
+                            setIsEditTenantOpen(true);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-[11px] font-bold border border-slate-700 transition cursor-pointer ml-auto"
+                        >
+                          <Settings className="w-3 h-3 text-indigo-400" />
+                          <span>Edit Seats ({tenant.userLicenses || 15})</span>
                         </button>
 
                         <button
                           onClick={() => loadDrilldown(tenant.id)}
-                          className="flex items-center gap-1 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer ml-auto"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow transition cursor-pointer"
                         >
                           <span>Drilldown</span>
                           <ChevronRight className="w-3.5 h-3.5" />
@@ -972,6 +1032,27 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
 
                   {/* Header Actions */}
                   <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => {
+                        const t = drilldownData!.tenant;
+                        setEditingTenant({
+                          id: t.id,
+                          name: t.name,
+                          code: t.code,
+                          planType: t.planType || 'Enterprise',
+                          userLicenses: t.userLicenses || 15,
+                          availableMinutes: t.availableMinutes || 10000,
+                          subscriptionEnd: t.subscriptionEnd || '2027-12-31',
+                          status: t.status as 'active' | 'inactive'
+                        });
+                        setIsEditTenantOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Edit Tenant & Seats ({drilldownData?.tenant.userLicenses || 15} Max)</span>
+                    </button>
+
                     <button
                       onClick={() => handleToggleSupervisorNotification(drilldownData!.tenant.id, drilldownData!.notifySupervisorOnImpersonate)}
                       className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
@@ -1309,7 +1390,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                             role: 'Administrator',
                             status: 'Active',
                             provisionedBy: 'DEVELOPER_TEAM',
-                            ticketRef: 'DEV-TENANT-' + Math.floor(100 + Math.random() * 900),
                             notes: `Provisioned for ${drilldownData?.tenant.name}`,
                             specificDid: '27001'
                           });
@@ -1366,9 +1446,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                                     }`}>
                                       {admin.provisionedBy === 'DEVELOPER_TEAM' ? 'Developer Team' : 'Support Team'}
                                     </span>
-                                    {admin.ticketRef && (
-                                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">{admin.ticketRef}</div>
-                                    )}
                                   </td>
                                   <td className="py-3.5 px-4">
                                     <div className="flex items-center gap-2">
@@ -1480,7 +1557,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                         role: 'Administrator',
                         status: 'Active',
                         provisionedBy: 'DEVELOPER_TEAM',
-                        ticketRef: 'DEV-ONBOARD-' + Math.floor(100 + Math.random() * 900),
                         notes: 'Provisioned by Developer Team for tenant operations',
                         specificDid: '27001'
                       });
@@ -1498,14 +1574,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                   >
                     <Download className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Export CSV</span>
-                  </button>
-
-                  <button
-                    onClick={onOpenAdminPanel}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
-                  >
-                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Open Admin Panel (/admin)</span>
                   </button>
                 </div>
               </div>
@@ -1554,7 +1622,7 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                   <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-500" />
                   <input
                     type="text"
-                    placeholder="Search by User ID, Name, Email, Ext, Ticket #..."
+                    placeholder="Search by User ID, Name, Email, Ext..."
                     value={credentialSearch}
                     onChange={e => setCredentialSearch(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-slate-500 outline-indigo-500"
@@ -1697,11 +1765,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                             }`}>
                               {admin.provisionedBy === 'DEVELOPER_TEAM' ? 'Developer Team' : 'Support Team'}
                             </span>
-                            {admin.ticketRef && (
-                              <div className="text-[10px] text-slate-400 font-mono mt-1">
-                                Ref: {admin.ticketRef}
-                              </div>
-                            )}
                             {admin.notes && (
                               <div className="text-[10px] text-slate-500 italic truncate max-w-xs" title={admin.notes}>
                                 {admin.notes}
@@ -1907,107 +1970,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 3: SECURITY ARCHITECTURE & COMPARISON (4B.3 & 4B.5) */}
-        {/* ========================================================================= */}
-        {activeTab === 'security' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span>Zero-Knowledge Security Architecture & Comparison</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Why modern enterprise SaaS platforms replace plaintext password exposure with cryptographically scoped support sessions.
-              </p>
-            </div>
-
-            {/* Explanatory Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-950 border border-indigo-700 flex items-center justify-center text-indigo-400">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-sm text-white">One-Way Password Hashing</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Passwords are processed using salted Argon2id / bcrypt hashes. They are mathematically irreversible, meaning neither the super admin nor a rogue insider can ever read or reveal an agent password.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-950 border border-amber-700 flex items-center justify-center text-amber-400">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-sm text-white">15-Minute Scoped Tokens</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Support troubleshooting uses short-lived ephemeral JWT session tokens. The session automatically terminates after 15 minutes, preventing orphaned admin access and ensuring defensibility.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-950 border border-emerald-700 flex items-center justify-center text-emerald-400">
-                  <FileCheck className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-sm text-white">SOC 2 & GDPR Compliance</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Every support login generates an immutable audit record containing mandatory technician reason, timestamp, and IP. Client supervisors can also be notified in real-time.
-                </p>
-              </div>
-            </div>
-
-            {/* Old Way vs New Way Comparison Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="p-5 bg-slate-950/80 border-b border-slate-800">
-                <h3 className="font-bold text-sm text-white">Comparison: Legacy Plaintext Pattern vs. ZeeDial Cryptographic Pattern</h3>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/40 text-slate-400 border-b border-slate-800 text-[11px]">
-                    <tr>
-                      <th className="py-3.5 px-5">Architectural Capability</th>
-                      <th className="py-3.5 px-5 text-rose-400">The Old Way (Insecure / Anti-Pattern)</th>
-                      <th className="py-3.5 px-5 text-emerald-400">The New Way (ZeeDial Compliant Architecture)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800 text-slate-300">
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">Password Storage in DB</td>
-                      <td className="py-4 px-5 text-rose-300">Plaintext or two-way reversible encryption (Severe breach risk)</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">Argon2id salted one-way hash (Mathematically impossible to read)</td>
-                    </tr>
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">Support Troubleshooting</td>
-                      <td className="py-4 px-5 text-rose-300">Super admin looks up agent password and enters it manually</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">On-demand 15-minute cryptographically signed session token</td>
-                    </tr>
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">Defensible Audit Trail</td>
-                      <td className="py-4 px-5 text-rose-300">None. Logins look identical to regular agent activity</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">Mandatory justification prompt + immutable log ID with timestamps</td>
-                    </tr>
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">Tenant Transparency</td>
-                      <td className="py-4 px-5 text-rose-300">Tenants unaware of platform technician access</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">Per-tenant toggle for instant supervisor notification on impersonation</td>
-                    </tr>
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">CDR & Recording Access</td>
-                      <td className="py-4 px-5 text-rose-300">Must log in as agent to view call logs or recordings</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">Direct read-only master drilldown without requiring agent impersonation</td>
-                    </tr>
-                    <tr className="hover:bg-slate-800/30">
-                      <td className="py-4 px-5 font-bold text-white">Regulatory Audits (SOC 2, ISO, HIPAA)</td>
-                      <td className="py-4 px-5 text-rose-300">Instant failure due to shared credentials and unhashed passwords</td>
-                      <td className="py-4 px-5 text-emerald-300 font-semibold">Fully audit-ready with CSV/JSON log exports and zero-knowledge storage</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
         {/* TAB 4: INFRASTRUCTURE OVERVIEW */}
         {/* ========================================================================= */}
         {activeTab === 'overview' && (
@@ -2067,36 +2029,102 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
         {/* ========================================================================= */}
         {activeTab === 'billing' && (
           <div className="space-y-6">
-            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
-              <Lock className="w-5 h-5 text-blue-400" />
-              <span>Tenant Licensing & Expiry Lockout Controls</span>
-            </h2>
-            <p className="text-xs text-slate-400">
-              Manage subscription start/end dates and automated platform lockout enforcement.
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                  <Lock className="w-5 h-5 text-blue-400" />
+                  <span>Tenant Licensing & Expiry Lockout Controls</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  Manage subscription periods, agent seat quotas, and licensing status (switch between Active and Inactive).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400">Quick Legend:</span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  Active = Fully Licensed & Logins Allowed
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  Inactive = Locked Out / Suspended
+                </span>
+              </div>
+            </div>
 
             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-950/60 text-slate-400 border-b border-slate-800 text-[11px]">
                   <tr>
-                    <th className="py-3 px-4">Company</th>
-                    <th className="py-3 px-4">Code</th>
-                    <th className="py-3 px-4">Plan</th>
-                    <th className="py-3 px-4">Subscription Period</th>
-                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Client Tenant</th>
+                    <th className="py-3 px-4">Tenant Code</th>
+                    <th className="py-3 px-4">Plan Tier</th>
+                    <th className="py-3 px-4">Agent Seats Quota</th>
+                    <th className="py-3 px-4">Expiration Date</th>
+                    <th className="py-3 px-4">Licensing Status (Click to Toggle)</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800 text-slate-300">
                   {tenantsSummary.map(t => (
-                    <tr key={t.id}>
-                      <td className="py-3.5 px-4 font-bold text-white">{t.name}</td>
-                      <td className="py-3.5 px-4 font-mono text-indigo-300">{t.code}</td>
-                      <td className="py-3.5 px-4">{t.planType}</td>
-                      <td className="py-3.5 px-4 font-mono">{t.subscriptionEnd}</td>
+                    <tr key={t.id} className="hover:bg-slate-800/40 transition">
+                      <td className="py-3.5 px-4 font-bold text-white">
+                        <div>{t.name}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">ID: {t.id}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-indigo-300 font-bold">{t.code}</td>
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${t.status === 'active' ? 'bg-emerald-950 text-emerald-400' : 'bg-rose-950 text-rose-400'}`}>
-                          {t.status}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                          {t.planType || 'Enterprise'}
                         </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-300 font-bold text-sm">{t.userLicenses || 15}</span>
+                          <span className="text-slate-500 text-[10px]">max agents</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-300">
+                        {t.subscriptionEnd || '2027-12-31'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTenantStatus(t.id, t.status)}
+                          className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border transition cursor-pointer ${
+                            t.status === 'active'
+                              ? 'bg-emerald-950 hover:bg-emerald-900/80 text-emerald-300 border-emerald-700 shadow-sm'
+                              : 'bg-rose-950 hover:bg-rose-900/80 text-rose-300 border-rose-700 shadow-sm'
+                          }`}
+                          title={`Currently ${t.status}. Click to change to ${t.status === 'active' ? 'inactive' : 'active'}`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${t.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
+                          <span>{t.status === 'active' ? 'Active (Operational)' : 'Inactive (Suspended)'}</span>
+                          <span className="text-[10px] opacity-70 underline ml-1">Change</span>
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => {
+                            setEditingTenant({
+                              id: t.id,
+                              name: t.name,
+                              code: t.code,
+                              planType: t.planType || 'Enterprise',
+                              userLicenses: t.userLicenses || 15,
+                              availableMinutes: t.availableMinutes || 10000,
+                              subscriptionEnd: t.subscriptionEnd || '2027-12-31',
+                              status: t.status as 'active' | 'inactive'
+                            });
+                            setIsEditTenantOpen(true);
+                          }}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          <span>Edit License & Seats</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -2164,13 +2192,14 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                       name: newCompanyForm.name,
                       code: newCompanyForm.code,
                       planType: newCompanyForm.planType,
+                      userLicenses: Number(newCompanyForm.userLicenses) || 10,
                       viciUserGroup: `${newCompanyForm.code.toLowerCase()}_agent`,
                       espoTeam: `${newCompanyForm.name} Team`,
                       subscriptionEnd: newCompanyForm.subscriptionEnd
                     })
                   });
                   if (res.ok) {
-                    showToast(`Tenant "${newCompanyForm.name}" created successfully.`);
+                    showToast(`Tenant "${newCompanyForm.name}" created successfully with ${newCompanyForm.userLicenses} agent seats.`);
                     setIsNewCompanyOpen(false);
                     loadTenantsSummary();
                   }
@@ -2211,21 +2240,41 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                     onChange={e => setNewCompanyForm({ ...newCompanyForm, planType: e.target.value as any })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
                   >
-                    <option value="Starter">Starter (5 Seats)</option>
-                    <option value="Professional">Professional (15 Seats)</option>
-                    <option value="Enterprise">Enterprise (50+ Seats)</option>
+                    <option value="Starter">Starter</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Enterprise">Enterprise</option>
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-slate-400 mb-1">Subscription Expiry Date</label>
-                <input
-                  type="date"
-                  value={newCompanyForm.subscriptionEnd}
-                  onChange={e => setNewCompanyForm({ ...newCompanyForm, subscriptionEnd: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">
+                    Number of Agents Wanted *
+                  </label>
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={newCompanyForm.userLicenses}
+                    onChange={e => setNewCompanyForm({ ...newCompanyForm, userLicenses: parseInt(e.target.value) || 1 })}
+                    placeholder="e.g. 15"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-emerald-300 font-mono font-bold outline-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Allocated agent seats (can be edited later anytime).
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Subscription Expiry Date</label>
+                  <input
+                    type="date"
+                    value={newCompanyForm.subscriptionEnd}
+                    onChange={e => setNewCompanyForm({ ...newCompanyForm, subscriptionEnd: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
@@ -2241,6 +2290,158 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold cursor-pointer"
                 >
                   Create Tenant Partition
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT TENANT, AGENT SEATS QUOTA & LICENSING STATUS */}
+      {/* ========================================================================= */}
+      {isEditTenantOpen && editingTenant && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Edit Client Tenant & Licensing</h3>
+                  <p className="text-xs text-slate-400">Configure agent capacity, licensing status, and subscription</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditTenantOpen(false);
+                  setEditingTenant(null);
+                }}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateTenantSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Company / Tenant Name *</label>
+                <input
+                  required
+                  type="text"
+                  value={editingTenant.name}
+                  onChange={e => setEditingTenant({ ...editingTenant, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Tenant Code</label>
+                  <input
+                    required
+                    type="text"
+                    value={editingTenant.code}
+                    onChange={e => setEditingTenant({ ...editingTenant, code: e.target.value.toUpperCase() })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono outline-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-bold mb-1">Plan Type</label>
+                  <select
+                    value={editingTenant.planType}
+                    onChange={e => setEditingTenant({ ...editingTenant, planType: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500"
+                  >
+                    <option value="Starter">Starter</option>
+                    <option value="Professional">Professional</option>
+                    <option value="Enterprise">Enterprise</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Number of Agents / Agent Seats Quota */}
+              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-1.5">
+                <label className="block text-slate-200 font-bold">
+                  Number of Agents (Agent Seats Quota) *
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    required
+                    type="number"
+                    min="1"
+                    max="5000"
+                    value={editingTenant.userLicenses}
+                    onChange={e => setEditingTenant({ ...editingTenant, userLicenses: parseInt(e.target.value) || 1 })}
+                    className="w-32 bg-slate-900 border border-slate-700 rounded-lg p-2 text-emerald-300 font-mono font-bold text-sm outline-indigo-500"
+                  />
+                  <span className="text-slate-400 text-[11px]">
+                    Maximum active concurrent agents permitted for this client.
+                  </span>
+                </div>
+              </div>
+
+              {/* Licensing & Expiration Status - Active / Inactive */}
+              <div className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+                <label className="block text-slate-200 font-bold">
+                  Licensing Operational Status *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTenant({ ...editingTenant, status: 'active' })}
+                    className={`p-2.5 rounded-xl border text-center font-bold transition cursor-pointer flex flex-col items-center gap-1 ${
+                      editingTenant.status === 'active'
+                        ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300 shadow-md ring-1 ring-emerald-500/50'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-xs">Active</span>
+                    <span className="text-[10px] font-normal text-emerald-400/80">Platform Unlocked & Live</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingTenant({ ...editingTenant, status: 'inactive' })}
+                    className={`p-2.5 rounded-xl border text-center font-bold transition cursor-pointer flex flex-col items-center gap-1 ${
+                      editingTenant.status === 'inactive'
+                        ? 'bg-rose-950/80 border-rose-500 text-rose-300 shadow-md ring-1 ring-rose-500/50'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    <span className="text-xs">Inactive</span>
+                    <span className="text-[10px] font-normal text-rose-400/80">Suspended / Locked Out</span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Subscription Expiration Date</label>
+                <input
+                  type="date"
+                  value={editingTenant.subscriptionEnd}
+                  onChange={e => setEditingTenant({ ...editingTenant, subscriptionEnd: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white outline-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditTenantOpen(false);
+                    setEditingTenant(null);
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition cursor-pointer"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
@@ -2420,21 +2621,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                   </select>
                 </div>
 
-                {/* Ticket / Tracking Reference */}
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">
-                    Jira / Zendesk Ticket Reference *
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. DEV-4921 or SUP-8812"
-                    value={adminProvisionForm.ticketRef}
-                    onChange={e => setAdminProvisionForm({ ...adminProvisionForm, ticketRef: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono outline-indigo-500"
-                  />
-                </div>
-
                 {/* Initial Access Status */}
                 <div>
                   <label className="block text-slate-300 font-bold mb-1">Access Status</label>
@@ -2544,20 +2730,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                   placeholder="Enter new password (min 6 characters)"
                   value={adminResetNewPassword}
                   onChange={e => setAdminResetNewPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono outline-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-bold mb-1">
-                  Ticket Reference / Reason *
-                </label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. SUP-PWRESET-9102"
-                  value={adminResetTicketRef}
-                  onChange={e => setAdminResetTicketRef(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono outline-indigo-500"
                 />
               </div>
@@ -2694,15 +2866,6 @@ Provisioned By: ${admin.provisionedBy || 'DEVELOPER_TEAM'} (${admin.ticketRef ||
                     <option value="DEVELOPER_TEAM">Developer Team</option>
                     <option value="SUPPORT_TEAM">Support Team</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-slate-300 font-bold mb-1">Ticket Reference</label>
-                  <input
-                    type="text"
-                    value={editingAdminUser.ticketRef || ''}
-                    onChange={e => setEditingAdminUser({ ...editingAdminUser, ticketRef: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white font-mono outline-indigo-500"
-                  />
                 </div>
               </div>
 

@@ -36,7 +36,7 @@ export class MockVicidialAdapter implements IVicidialAdapter {
   async getRandomLiveCall(): Promise<{ viciCallId: string; agentName: string; phoneNumber: string; duration: string } | null> {
     return {
       viciCallId: 'VICI-CALL-' + Math.floor(Math.random() * 90000 + 10000),
-      agentName: 'somnathlead_agent01@zeedial.com',
+      agentName: 'agent01@dialko.com',
       phoneNumber: '918073236368',
       duration: '00:02:45'
     };

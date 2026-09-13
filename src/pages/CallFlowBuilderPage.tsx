@@ -43,8 +43,8 @@ export const CallFlowBuilderPage: React.FC<CallFlowBuilderProps> = ({ activeTena
       id: 'n2',
       type: 'ivr_menu',
       title: 'Main IVR: Welcome Prompt',
-      subtitle: 'Audio: welcome_zeedial.wav (DTMF 1, 2, 9)',
-      config: { audio: 'welcome_zeedial.wav', timeout: 5 },
+      subtitle: 'Audio: welcome_dialko.wav (DTMF 1, 2, 9)',
+      config: { audio: 'welcome_dialko.wav', timeout: 5 },
       x: 350,
       y: 80
     },
@@ -171,7 +171,7 @@ export const CallFlowBuilderPage: React.FC<CallFlowBuilderProps> = ({ activeTena
               <div>
                 <label className="block text-slate-700 font-bold mb-1">Audio Prompt (WAV / GSM)</label>
                 <select className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs">
-                  <option>welcome_zeedial.wav</option>
+                  <option>welcome_dialko.wav</option>
                   <option>sales_intro_english.wav</option>
                   <option>after_hours_closed.wav</option>
                 </select>

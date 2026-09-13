@@ -133,7 +133,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
     city: 'Bengaluru',
     state: 'Karnataka',
     country: 'India',
-    user: currentUser.emailId || 'agent01@zeedial.com',
+    user: currentUser.emailId || 'agent01@dialko.com',
     tags: ['VIP', 'Hot Lead', 'Telecom Upgrade'],
     associatedContacts: 'Ravi Tech Corp',
     leadStatus: 'In Discussion',
@@ -420,7 +420,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
           city: data.lead.city || 'Bengaluru',
           state: data.lead.state || 'Karnataka',
           country: data.lead.country || 'India',
-          user: currentUser.emailId || 'agent@zeedial.com',
+          user: currentUser.emailId || 'agent@dialko.com',
           tags: [data.lead.industry || 'Telecom', 'Auto-Hopper'],
           associatedContacts: data.lead.lastName || 'Enterprise Corp',
           leadStatus: data.lead.status || 'In Progress',
@@ -497,7 +497,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
           city: data.nextLead.city || 'Bengaluru',
           state: data.nextLead.state || 'Karnataka',
           country: data.nextLead.country || 'India',
-          user: currentUser.emailId || 'agent@zeedial.com',
+          user: currentUser.emailId || 'agent@dialko.com',
           tags: [data.nextLead.industry || 'Telecom', 'Auto-Hopper'],
           associatedContacts: data.nextLead.lastName || 'Enterprise Corp',
           leadStatus: data.nextLead.status || 'In Progress',
@@ -664,7 +664,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
   });
 
   return (
-    <div id="zeedial-agent-panel-root" className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 select-none antialiased">
+    <div id="dialko-agent-panel-root" className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-800 select-none antialiased">
       
       {/* ========================================================================= */}
       {/* 1. TOP HEADER & SOFTPHONE TELEPHONY BAR                                   */}
@@ -675,10 +675,10 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('dashboard')}>
             <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center text-white font-black text-sm shadow-md">
-              Z
+              D
             </div>
             <div className="leading-tight">
-              <span className="font-bold text-base text-white tracking-tight block">Zeedial</span>
+              <span className="font-bold text-base text-white tracking-tight block">Dialko</span>
               <span className="text-[10px] text-slate-400 block font-medium">Agent Workspace</span>
             </div>
           </div>
@@ -1381,7 +1381,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
                       <span className="text-[10px] font-mono text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded">Sales v2</span>
                     </h3>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      "Hello <strong>{currentLead.firstName}</strong>, I'm calling from <strong>Zeedial Cloud Telephony</strong>. We help companies scale high-concurrency autodialing with 99.99% uptime."
+                      "Hello <strong>{currentLead.firstName}</strong>, I'm calling from <strong>Dialko Cloud Telephony</strong>. We help companies scale high-concurrency autodialing with 99.99% uptime."
                     </p>
                   </div>
 
@@ -1638,7 +1638,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
                   <div className="p-4 bg-sky-50/50 rounded-xl border border-sky-100">
                     <h4 className="font-bold text-sky-900 text-xs uppercase tracking-wider mb-1">1. Greeting & Permission</h4>
                     <p className="text-xs leading-relaxed text-slate-700">
-                      "Good day! Am I speaking with <strong>[Customer Name]</strong>? My name is <strong>{currentUser.name}</strong> calling from Zeedial Cloud Telephony. I’m reaching out regarding high-capacity dialer scaling for your business."
+                      "Good day! Am I speaking with <strong>[Customer Name]</strong>? My name is <strong>{currentUser.name}</strong> calling from Dialko Cloud Telephony. I’m reaching out regarding high-capacity dialer scaling for your business."
                     </p>
                   </div>
 
@@ -2112,7 +2112,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
                   rows={3}
                   value={customSmsMessage}
                   onChange={e => setCustomSmsMessage(e.target.value)}
-                  placeholder={`Hi ${currentLead.firstName || 'Customer'}, thank you for speaking with ${currentUser.name} from Zeedial Cloud Telephony. Here is your demo link: https://zeedial.com/demo`}
+                  placeholder={`Hi ${currentLead.firstName || 'Customer'}, thank you for speaking with ${currentUser.name} from Dialko Cloud Telephony. Here is your demo link: https://dialko.com/demo`}
                   className="w-full p-2.5 border border-slate-200 rounded-xl"
                 />
               </div>
@@ -2159,7 +2159,7 @@ export const AgentWorkspacePage: React.FC<AgentWorkspacePageProps> = ({
               <div className="mt-4 space-y-3 text-xs">
                 <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl">
                   <span className="text-[10px] font-bold text-sky-700 block uppercase tracking-wider">Logged In User</span>
-                  <strong className="text-slate-900 font-mono text-xs">{currentUser.emailId || 'agent01@zeedial.com'}</strong>
+                  <strong className="text-slate-900 font-mono text-xs">{currentUser.emailId || 'agent01@dialko.com'}</strong>
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl">

@@ -42,7 +42,7 @@ export const SurveysPage: React.FC<SurveysPageProps> = ({ activeTenant }) => {
       {
         id: 'q1',
         type: 'Radio',
-        title: 'Is the customer interested in Zeedial Enterprise setup?',
+        title: 'Is the customer interested in Dialko Enterprise setup?',
         required: true,
         options: ['Yes - Immediate Onboarding', 'Follow Up Required', 'Not Interested']
       },
@@ -131,7 +131,7 @@ export const SurveysPage: React.FC<SurveysPageProps> = ({ activeTenant }) => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `zeedial_survey_responses_${Date.now()}.csv`);
+    link.setAttribute("download", `dialko_survey_responses_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
   };

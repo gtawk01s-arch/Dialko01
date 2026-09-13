@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      id="zeedial-sidebar"
+      id="dialko-sidebar"
       className={`bg-[#0F172A] text-slate-300 h-screen flex flex-col border-r border-slate-800 select-none shrink-0 transition-all duration-200 ${
         collapsed ? 'w-16' : 'w-64'
       }`}
@@ -82,12 +82,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand Header */}
       <div className="p-4 sm:p-5 border-b border-slate-800/80 flex items-center justify-between bg-[#0B1120]">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-black text-white text-sm shadow-md shrink-0">
-            Z
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-md shrink-0">
+            D
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-white tracking-tight leading-tight">ZEEDIAL ADMIN</span>
+              <span className="text-sm font-bold text-white tracking-tight leading-tight">DIALKO ADMIN</span>
               <span className="text-[10px] text-slate-400 font-medium">Enterprise Telephony</span>
             </div>
           )}
@@ -104,29 +104,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Menu Links */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin scrollbar-thumb-slate-800 text-xs">
-        {/* Super Admin Master SaaS Section - Strictly visible ONLY for SUPER_ADMIN role */}
-        {isSuperAdmin && (
-          <div className="mb-3 pb-2 border-b border-indigo-900/60 bg-indigo-950/30 p-2 rounded-lg border border-indigo-500/20">
-            <div className="px-1 pb-1.5 text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-indigo-400" />
-              {!collapsed && <span>Master SaaS Layer</span>}
-            </div>
-
-            <div
-              id="nav-super-admin-dashboard"
-              onClick={() => navigate('super-admin')}
-              className={`flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
-                active === 'super-admin'
-                  ? 'bg-indigo-600 text-white font-bold shadow-xs'
-                  : 'text-indigo-200 hover:bg-indigo-900/60 hover:text-white'
-              }`}
-            >
-              <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
-              {!collapsed && <span>Super Admin Console</span>}
-            </div>
-          </div>
-        )}
-
         {/* Main Section */}
         <div className="px-2 pb-1 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
           {!collapsed && 'Main Console'}

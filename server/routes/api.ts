@@ -245,7 +245,7 @@ let systemInfrastructureConfig = {
   dialerApiUrl: process.env.VICIDIAL_API_URL || 'http://192.168.1.11/vicidial/non_agent_api.php',
   dialerApiUser: process.env.VICIDIAL_API_USER || 'cron',
   dialerApiPass: process.env.VICIDIAL_API_PASS || '1234',
-  crmApiUrl: process.env.ESPOCRM_API_URL || 'https://crm.zeedial.com/api/v1',
+  crmApiUrl: process.env.ESPOCRM_API_URL || 'https://crm.dialko.com/api/v1',
   crmApiKey: process.env.ESPOCRM_API_KEY || 'crm_api_key_placeholder',
   databaseConnectionString: process.env.DATABASE_URL || 'mysql://cron:1234@192.168.1.11:3306/asterisk',
   databaseHost: '192.168.1.11',
@@ -410,6 +410,87 @@ apiRouter.patch('/super-admin/companies/:id/status', (req: Request, res: Respons
   res.json({ success: true, tenant });
 });
 
+// Update Company Full Details (Allowed Agents, Status, Plan, Expiry, Name)
+apiRouter.put('/super-admin/companies/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenant = db.tenants.find(t => t.id === id);
+  if (!tenant) {
+    return res.status(404).json({ success: false, error: 'Company not found' });
+  }
+
+  const {
+    name,
+    userLicenses,
+    maxUsers,
+    status,
+    availableMinutes,
+    subscriptionStart,
+    subscriptionEnd,
+    planType,
+    primaryContactEmail,
+    primaryContactPhone
+  } = req.body;
+
+  if (name) tenant.name = name;
+  if (userLicenses !== undefined) tenant.userLicenses = Number(userLicenses);
+  else if (maxUsers !== undefined) tenant.userLicenses = Number(maxUsers);
+  if (status) tenant.status = status;
+  if (availableMinutes !== undefined) tenant.availableMinutes = Number(availableMinutes);
+  if (subscriptionStart) tenant.subscriptionStart = subscriptionStart;
+  if (subscriptionEnd) tenant.subscriptionEnd = subscriptionEnd;
+  if (planType) tenant.planType = planType;
+  if (primaryContactEmail !== undefined) tenant.primaryContactEmail = primaryContactEmail;
+  if (primaryContactPhone !== undefined) tenant.primaryContactPhone = primaryContactPhone;
+
+  db.auditLogs.unshift({
+    id: `al-${Date.now()}`,
+    tenantId: tenant.id,
+    timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+    actorId: currentUserSession.user?.userId || 'superadmin',
+    actorName: currentUserSession.user?.name || 'Master Super Admin',
+    actorRole: 'SUPER_ADMIN',
+    action: 'TENANT_UPDATED' as any,
+    details: `Updated tenant '${tenant.name}' (${tenant.code}): seats=${tenant.userLicenses}, status=${tenant.status}, expiry=${tenant.subscriptionEnd}`,
+    ipAddress: req.ip || '127.0.0.1'
+  });
+
+  res.json({ success: true, tenant });
+});
+
+apiRouter.patch('/super-admin/companies/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenant = db.tenants.find(t => t.id === id);
+  if (!tenant) {
+    return res.status(404).json({ success: false, error: 'Company not found' });
+  }
+
+  const {
+    name,
+    userLicenses,
+    maxUsers,
+    status,
+    availableMinutes,
+    subscriptionStart,
+    subscriptionEnd,
+    planType,
+    primaryContactEmail,
+    primaryContactPhone
+  } = req.body;
+
+  if (name) tenant.name = name;
+  if (userLicenses !== undefined) tenant.userLicenses = Number(userLicenses);
+  else if (maxUsers !== undefined) tenant.userLicenses = Number(maxUsers);
+  if (status) tenant.status = status;
+  if (availableMinutes !== undefined) tenant.availableMinutes = Number(availableMinutes);
+  if (subscriptionStart) tenant.subscriptionStart = subscriptionStart;
+  if (subscriptionEnd) tenant.subscriptionEnd = subscriptionEnd;
+  if (planType) tenant.planType = planType;
+  if (primaryContactEmail !== undefined) tenant.primaryContactEmail = primaryContactEmail;
+  if (primaryContactPhone !== undefined) tenant.primaryContactPhone = primaryContactPhone;
+
+  res.json({ success: true, tenant });
+});
+
 // Update Subscription Dates
 apiRouter.patch('/super-admin/companies/:id/subscription', (req: Request, res: Response) => {
   const { id } = req.params;
@@ -509,6 +590,9 @@ apiRouter.get('/super-admin/tenants-summary', (req: Request, res: Response) => {
       code: tenant.code,
       status: isExpired ? 'expired' : tenant.status,
       planType: tenant.planType || 'Enterprise',
+      userLicenses: tenant.userLicenses || tenant.maxUsers || 15,
+      maxUsers: tenant.userLicenses || tenant.maxUsers || 15,
+      availableMinutes: tenant.availableMinutes || 10000,
       totalAgents: tenantAgents.length,
       liveAgentsCount: liveAgents.length,
       inCallCount: liveInCalls.length,
@@ -629,7 +713,7 @@ const handleImpersonateRequest = (req: Request, res: Response) => {
       name: 'Master Super Administrator',
       mobileNumber: '9999999999',
       mobileExtension: '9999',
-      emailId: 'superadmin@zeedial.com',
+      emailId: 'superadmin@dialko.com',
       status: 'Active',
       role: 'SUPER_ADMIN',
       userGroup: 'SUPER_ADMIN_GROUP',
@@ -818,7 +902,6 @@ apiRouter.get('/super-admin/admin-credentials', (req: Request, res: Response) =>
       u.userId.toLowerCase().includes(q) ||
       u.emailId.toLowerCase().includes(q) ||
       u.mobileExtension.includes(q) ||
-      (u.ticketRef && u.ticketRef.toLowerCase().includes(q)) ||
       (u.notes && u.notes.toLowerCase().includes(q))
     );
   }
@@ -850,7 +933,6 @@ apiRouter.post('/super-admin/admin-credentials', (req: Request, res: Response) =
     role = 'Administrator',
     status = 'Active',
     provisionedBy = 'DEVELOPER_TEAM',
-    ticketRef = 'DEV-MANUAL',
     notes = '',
     specificDid = '27001'
   } = req.body;
@@ -899,7 +981,6 @@ apiRouter.post('/super-admin/admin-credentials', (req: Request, res: Response) =
     skills: ['Operations', 'Supervision', 'Admin Access'],
     provisionedBy: (provisionedBy || 'DEVELOPER_TEAM') as 'DEVELOPER_TEAM' | 'SUPPORT_TEAM',
     provisionedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    ticketRef: String(ticketRef).trim(),
     notes: String(notes).trim(),
     lastLogin: undefined,
     adminPortalAccess: true
@@ -916,7 +997,7 @@ apiRouter.post('/super-admin/admin-credentials', (req: Request, res: Response) =
     actorName: currentUserSession.user?.name || 'Master Super Admin',
     actorRole: 'SUPER_ADMIN',
     action: 'ADMIN_PROVISIONED' as any,
-    details: `${provisionedBy} provisioned ${role} '${newAdminUser.name}' (${newAdminUser.userId}) for tenant '${targetTenant.name}'. Ticket: ${ticketRef}`,
+    details: `${provisionedBy} provisioned ${role} '${newAdminUser.name}' (${newAdminUser.userId}) for tenant '${targetTenant.name}'.`,
     ipAddress: req.ip || '127.0.0.1'
   });
 
@@ -942,7 +1023,6 @@ apiRouter.put('/super-admin/admin-credentials/:id', (req: Request, res: Response
     role,
     status,
     notes,
-    ticketRef,
     specificDid
   } = req.body;
 
@@ -953,7 +1033,6 @@ apiRouter.put('/super-admin/admin-credentials/:id', (req: Request, res: Response
   if (role) user.role = role;
   if (status) user.status = status;
   if (notes !== undefined) user.notes = notes;
-  if (ticketRef !== undefined) user.ticketRef = ticketRef;
   if (specificDid) user.specificDid = specificDid;
 
   db.auditLogs.unshift({
@@ -1071,7 +1150,7 @@ apiRouter.get('/super-admin/admin-credentials/export', (req: Request, res: Respo
     u.role === 'Administrator' || u.role === 'Supervisor' || u.role === 'SUPER_ADMIN'
   );
 
-  const headers = ['ID', 'User ID', 'Name', 'Email', 'Extension', 'Role', 'Status', 'Tenant ID', 'Tenant Name', 'Provisioned By', 'Ticket Ref', 'Last Login'];
+  const headers = ['ID', 'User ID', 'Name', 'Email', 'Extension', 'Role', 'Status', 'Tenant ID', 'Tenant Name', 'Provisioned By', 'Last Login'];
   const rows = adminUsers.map(u => {
     const tenant = db.tenants.find(t => t.id === u.tenantId);
     return [
@@ -1085,7 +1164,6 @@ apiRouter.get('/super-admin/admin-credentials/export', (req: Request, res: Respo
       `"${u.tenantId}"`,
       `"${tenant?.name || 'Root'}"`,
       `"${u.provisionedBy || 'DEVELOPER_TEAM'}"`,
-      `"${u.ticketRef || 'DEV-INIT'}"`,
       `"${u.lastLogin || 'Never'}"`
     ];
   });
@@ -1107,10 +1185,49 @@ apiRouter.post('/tenants', (req: Request, res: Response) => {
   const newTenant = {
     id: `t-${db.tenants.length + 1}`,
     ...req.body,
+    userLicenses: req.body.maxUsers ? Number(req.body.maxUsers) : (req.body.userLicenses ? Number(req.body.userLicenses) : 10),
     createdAt: new Date().toISOString()
   };
   db.tenants.push(newTenant);
   res.status(201).json(newTenant);
+});
+
+apiRouter.put('/tenants/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenant = db.tenants.find(t => t.id === id);
+  if (!tenant) {
+    return res.status(404).json({ success: false, error: 'Tenant not found' });
+  }
+
+  if (req.body.name) tenant.name = req.body.name;
+  if (req.body.code) tenant.code = req.body.code;
+  if (req.body.status) tenant.status = req.body.status;
+  if (req.body.planType) tenant.planType = req.body.planType;
+  if (req.body.userLicenses !== undefined) tenant.userLicenses = Number(req.body.userLicenses);
+  else if (req.body.maxUsers !== undefined) tenant.userLicenses = Number(req.body.maxUsers);
+  if (req.body.availableMinutes !== undefined) tenant.availableMinutes = Number(req.body.availableMinutes);
+  if (req.body.subscriptionEnd) tenant.subscriptionEnd = req.body.subscriptionEnd;
+
+  res.json({ success: true, tenant });
+});
+
+apiRouter.patch('/tenants/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const tenant = db.tenants.find(t => t.id === id);
+  if (!tenant) {
+    return res.status(404).json({ success: false, error: 'Tenant not found' });
+  }
+
+  if (req.body.name) tenant.name = req.body.name;
+  if (req.body.code) tenant.code = req.body.code;
+  if (req.body.status) tenant.status = req.body.status;
+  if (req.body.planType) tenant.planType = req.body.planType;
+  if (req.body.userLicenses !== undefined) tenant.userLicenses = Number(req.body.userLicenses);
+  else if (req.body.maxUsers !== undefined) tenant.userLicenses = Number(req.body.maxUsers);
+  if (req.body.availableMinutes !== undefined) tenant.availableMinutes = Number(req.body.availableMinutes);
+  if (req.body.subscriptionEnd) tenant.subscriptionEnd = req.body.subscriptionEnd;
+
+  res.json({ success: true, tenant });
 });
 
 // -------------------------------------------------------------
@@ -1126,35 +1243,21 @@ apiRouter.get('/dashboard/stats', (req: Request, res: Response) => {
   res.json({
     campaignsCount: tenantCampaigns.length,
     leadsCount: tenantLeads.length,
-    totalCalls: 1003231, // matching sample high-scale dialer
-    bufferStatus: [
-      { list_id: '2609003', lead_count: 1 },
-      { list_id: '220526', lead_count: 2 },
-      { list_id: '200526', lead_count: 5 }
-    ],
-    agentWiseCalls: [
-      { agent: 'somnathlead_agent01@zeedial.com', totalCalls: 113, answered: 85, noAnswer: 28 },
-      { agent: 'somnathlead_agent02@zeedial.com', totalCalls: 155, answered: 98, noAnswer: 57 },
-      { agent: 'somnathlead_agent03@zeedial.com', totalCalls: 92, answered: 60, noAnswer: 32 },
-      { agent: 'somnathlead_agent04@zeedial.com', totalCalls: 67, answered: 42, noAnswer: 25 },
-      { agent: 'somnathlead_agent05@zeedial.com', totalCalls: 59, answered: 40, noAnswer: 19 },
-      { agent: 'somnathlead_agent06@zeedial.com', totalCalls: 56, answered: 36, noAnswer: 20 },
-      { agent: 'somnathlead_agent07@zeedial.com', totalCalls: 42, answered: 28, noAnswer: 14 }
-    ],
-    agentHours: [
-      { agent: 'somnathlead_agent01@zeedial.com', login: '10:55:52', breakTime: '00:45:40', talkTime: '05:17:29' },
-      { agent: 'somnathlead_agent02@zeedial.com', login: '10:56:21', breakTime: '00:50:04', talkTime: '05:01:53' },
-      { agent: 'somnathlead_agent03@zeedial.com', login: '10:24:06', breakTime: '00:42:46', talkTime: '04:24:26' },
-      { agent: 'somnathlead_agent04@zeedial.com', login: '10:29:19', breakTime: '00:57:52', talkTime: '03:01:21' },
-      { agent: 'somnathlead_agent05@zeedial.com', login: '10:31:58', breakTime: '00:58:44', talkTime: '04:14:09' },
-      { agent: 'somnathlead_agent06@zeedial.com', login: '10:49:46', breakTime: '00:45:08', talkTime: '03:45:54' },
-      { agent: 'somnathlead_agent07@zeedial.com', login: '10:50:17', breakTime: '01:09:25', talkTime: '02:56:32' }
-    ],
-    callStatusBreakdown: [
-      { call_type: 'INBOUND', status: 'ABANDON', count: 1 },
-      { call_type: 'INBOUND', status: 'COMPLETE', count: 72 },
-      { call_type: 'MANUAL', status: 'NOANSWER', count: 1777 }
-    ],
+    totalCalls: tenantCalls.length,
+    bufferStatus: [],
+    agentWiseCalls: tenantAgents.map(a => ({
+      agent: a.name || a.agentId,
+      totalCalls: a.callsHandled || 0,
+      answered: Math.floor((a.callsHandled || 0) * 0.7),
+      noAnswer: Math.floor((a.callsHandled || 0) * 0.3)
+    })),
+    agentHours: tenantAgents.map(a => ({
+      agent: a.name || a.agentId,
+      login: a.loginTime || '09:00:00',
+      breakTime: '00:00:00',
+      talkTime: a.totalTalkTime || '00:00:00'
+    })),
+    callStatusBreakdown: [],
     liveAgentCount: tenantAgents.length,
     liveCallCount: db.liveCalls.filter(c => c.tenantId === tid).length
   });
@@ -1489,7 +1592,7 @@ apiRouter.post('/agent/disposition', async (req: Request, res: Response) => {
   const name = customerName || 'Customer';
   const dur = callDuration || '00:01:15';
   const agent = currentUserSession.user?.name || 'Agent';
-  const agentEmail = currentUserSession.user?.emailId || 'agent@zeedial.com';
+  const agentEmail = currentUserSession.user?.emailId || 'agent@dialko.com';
 
   // 1. Update Lead Status in Leads DB
   if (leadId) {
@@ -1970,7 +2073,7 @@ apiRouter.post('/tickets', async (req: Request, res: Response) => {
     status: req.body.status || 'open',
     subject: req.body.subject || 'Support Ticket',
     dueDate: req.body.dueDate || '2026-08-30',
-    assign: req.body.assign || 'somnathlead_agent01@zeedial.com',
+    assign: req.body.assign || 'agent01@dialko.com',
     phoneNumber: req.body.phoneNumber || '9480732362',
     duration: '00:00:00',
     priority: req.body.priority || 'Medium'
@@ -2039,7 +2142,7 @@ apiRouter.post('/users', (req: Request, res: Response) => {
     mobileExtension: req.body.mobileExtension || '1011',
     specificDid: req.body.specificDid || '',
     password: req.body.password || 'UserPassword@123',
-    emailId: req.body.emailId || 'agent@zeedial.com',
+    emailId: req.body.emailId || 'agent@dialko.com',
     status: (req.body.status || 'Active') as 'Active' | 'Inactive',
     role: (req.body.role || 'Agent') as 'Administrator' | 'Agent' | 'Supervisor' | 'Master Admin',
     userGroup: req.body.userGroup || 'somnathlead_agent',
@@ -2570,7 +2673,7 @@ apiRouter.post('/routing/inbound-call-dispatch', (req: Request, res: Response) =
     callType: 'INBOUND' as const,
     queue: targetQueue || camp?.inboundTargetQueue || 'Inbound_ACD',
     agentName: routedAgent,
-    agentEmail: `${routedAgent.toLowerCase().replace(/\s+/g, '.')}@zeedial.com`,
+    agentEmail: `${routedAgent.toLowerCase().replace(/\s+/g, '.')}@dialko.com`,
     team: 'Inbound Support',
     station: '1002',
     status: 'COMPLETE' as const,
@@ -2659,7 +2762,7 @@ apiRouter.post('/sms/send-instant', async (req: Request, res: Response) => {
       .replace(/\{\{agent_name\}\}/g, currentUserSession.user?.name || 'Agent')
       .replace(/\{\{callback_time\}\}/g, 'Tomorrow 11:00 AM');
   } else if (!finalMessage) {
-    finalMessage = `Hi ${leadName || 'Customer'}, thank you for speaking with ${currentUserSession.user?.name || 'Zeedial'}. We look forward to working with you!`;
+    finalMessage = `Hi ${leadName || 'Customer'}, thank you for speaking with ${currentUserSession.user?.name || 'Dialko'}. We look forward to working with you!`;
   }
 
   const dispatch = await smsGatewayAdapter.sendSMS(phoneNumber, finalMessage);

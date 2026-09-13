@@ -79,7 +79,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ activeTenant, reportTy
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `zeedial_${reportName}_${Date.now()}.csv`);
+    link.setAttribute("download", `dialko_${reportName}_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
   };
@@ -419,9 +419,9 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({ activeTenant, reportTy
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
                 {[
-                  { name: 'somnathlead_agent01@zeedial.com', total: 113, answered: 85, conv: 14, login: '10:55:52', talk: '05:17:29', pause: '00:45:40' },
-                  { name: 'somnathlead_agent02@zeedial.com', total: 155, answered: 98, conv: 21, login: '10:56:21', talk: '05:01:53', pause: '00:50:04' },
-                  { name: 'somnathlead_agent03@zeedial.com', total: 92, answered: 60, conv: 9, login: '10:24:06', talk: '04:24:26', pause: '00:42:46' }
+                  { name: 'somnathlead_agent01@dialko.com', total: 113, answered: 85, conv: 14, login: '10:55:52', talk: '05:17:29', pause: '00:45:40' },
+                  { name: 'somnathlead_agent02@dialko.com', total: 155, answered: 98, conv: 21, login: '10:56:21', talk: '05:01:53', pause: '00:50:04' },
+                  { name: 'somnathlead_agent03@dialko.com', total: 92, answered: 60, conv: 9, login: '10:24:06', talk: '04:24:26', pause: '00:42:46' }
                 ].map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-2.5 px-3.5 border-r border-slate-100 font-sans font-medium text-slate-800">{row.name}</td>

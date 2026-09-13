@@ -60,7 +60,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ activeTenant, onOpenSurvey
   const [uploadData, setUploadData] = React.useState({
     fileType: 'CSV' as 'CSV' | 'XLSX' | 'TXT',
     listId: '12',
-    fileName: 'zeedial_leads_sample.csv',
+    fileName: 'dialko_leads_sample.csv',
     duplicateCheck: 'Yes' as 'Yes' | 'No',
     autoAssign: 'Yes' as 'Yes' | 'No',
     phoneCol: 'Phone Number',
@@ -244,7 +244,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ activeTenant, onOpenSurvey
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `zeedial_leads_sample_${mode === 'preview' ? 'preview_mode' : 'template'}.csv`);
+    link.setAttribute('download', `dialko_leads_sample_${mode === 'preview' ? 'preview_mode' : 'template'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -452,7 +452,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ activeTenant, onOpenSurvey
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement("a");
               link.setAttribute("href", encodedUri);
-              link.setAttribute("download", `zeedial_leads_export_${Date.now()}.csv`);
+              link.setAttribute("download", `dialko_leads_export_${Date.now()}.csv`);
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -792,7 +792,7 @@ export const LeadsPage: React.FC<LeadsPageProps> = ({ activeTenant, onOpenSurvey
                   <div className="border-b border-slate-200 pb-2">
                     <h4 className="font-bold text-slate-800 text-sm">Step 2: Map Spreadsheet Columns to Lead Database Fields</h4>
                     <p className="text-slate-500 text-[11px]">
-                      Match the columns from your uploaded file to Zeedial lead fields. Phone Number is mandatory.
+                      Match the columns from your uploaded file to Dialko lead fields. Phone Number is mandatory.
                     </p>
                   </div>
 

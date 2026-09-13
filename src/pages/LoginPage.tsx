@@ -150,7 +150,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }
     } catch (err: any) {
       console.error('Login request error', err);
-      setErrorMsg('Unable to connect to Zeedial server. Please try again.');
+      setErrorMsg('Unable to connect to Dialko server. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -192,11 +192,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-white font-black text-lg shadow-md tracking-wider ${
               isSuperAdminPortal ? 'bg-indigo-600' : isAdminPortal ? 'bg-blue-600' : 'bg-emerald-600'
             }`}>
-              Z
+              D
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 text-base tracking-tight">Zeedial Cloud Telephony</span>
+                <span className="font-bold text-slate-900 text-base tracking-tight">Dialko Cloud Telephony</span>
                 <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
                   isSuperAdminPortal ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
                   isAdminPortal ? 'bg-blue-100 text-blue-800 border border-blue-200' :
@@ -361,7 +361,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div className={`text-left text-[11px] relative z-10 flex items-center justify-between ${
               isSuperAdminPortal ? 'text-slate-400' : 'text-slate-500'
             }`}>
-              <span>© 2026 Zeedial Cloud Telephony</span>
+              <span>© 2026 Dialko Cloud Telephony</span>
               <span>All Rights Reserved</span>
             </div>
           </div>
@@ -374,10 +374,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-xs ${
                   isSuperAdminPortal ? 'bg-indigo-600' : 'bg-red-600'
                 }`}>
-                  {isSuperAdminPortal ? 'S' : 'g'}
+                  {isSuperAdminPortal ? 'S' : 'D'}
                 </div>
                 <span className="font-black text-2xl text-slate-900 tracking-tighter">
-                  {isSuperAdminPortal ? 'Zeedial Super Admin' : 'Zeedial'}
+                  {isSuperAdminPortal ? 'Dialko Super Admin' : 'Dialko'}
                 </span>
               </div>
 
@@ -765,7 +765,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Footer info */}
       <footer className="w-full py-3 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
-        <span>Zeedial Cloud Telephony System • Version 2.1.108 Enterprise</span>
+        <span>Dialko Cloud Telephony System • Version 2.1.108 Enterprise</span>
       </footer>
     </div>
   );

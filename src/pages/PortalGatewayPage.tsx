@@ -25,11 +25,11 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/20">
-              Z
+              D
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-white text-lg tracking-tight">Zeedial Cloud Telephony</h1>
+                <h1 className="font-extrabold text-white text-lg tracking-tight">Dialko Cloud Telephony</h1>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">
                   Multi-Tenant SaaS
                 </span>
@@ -248,7 +248,7 @@ export const PortalGatewayPage: React.FC<PortalGatewayPageProps> = ({ onNavigate
       {/* Footer */}
       <footer className="w-full border-t border-slate-800 bg-slate-900/90 py-4 px-6 text-center text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>© 2026 Zeedial Cloud Telephony • Multi-Tenant Architecture</span>
+          <span>© 2026 Dialko Cloud Telephony • Multi-Tenant Architecture</span>
           <div className="flex items-center gap-4 text-slate-400">
             <span>Direct URLs:</span>
             <span className="font-mono text-indigo-400">/super-admin</span>

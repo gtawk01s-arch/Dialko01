@@ -34,14 +34,15 @@ import { ShieldAlert, ArrowRight, Building2, Headphones } from 'lucide-react';
 export default function App() {
   const [tenants, setTenants] = React.useState<Tenant[]>([]);
   const [activeTenant, setActiveTenant] = React.useState<Tenant>({
-    id: 't-1',
-    name: 'Somnath Enterprise Lead System',
-    slug: 'somnathlead',
-    status: 'Active',
-    maxUsers: 25,
-    minutesBalance: 12500,
-    vicidialIp: '192.168.1.100',
-    espocrmUrl: 'https://crm.somnathlead.com'
+    id: '',
+    name: 'No Organization Provisioned',
+    code: '',
+    status: 'active',
+    userLicenses: 0,
+    availableMinutes: 0,
+    viciUserGroup: '',
+    espoTeam: '',
+    createdAt: ''
   });
 
   // Dedicated URL Portal Detection
@@ -54,23 +55,23 @@ export default function App() {
       if (path === '/admin' || path.startsWith('/admin/') || search.includes('portal=admin')) return 'admin';
       if (path === '/' || path === '') return 'gateway';
     }
-    return 'admin';
+    return 'super-admin';
   });
 
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean>(true);
   const [currentUser, setCurrentUser] = React.useState<User | null>({
-    id: 'u-1',
-    tenantId: 't-1',
-    userId: 'somnathlead_admin',
-    name: 'Admin Supervisor',
-    emailId: 'admin@zeedial.com',
-    mobileNumber: '919876543200',
-    mobileExtension: '1001',
+    id: 'u-super-1',
+    tenantId: '',
+    userId: 'superadmin',
+    name: 'Dialko Master Administrator',
+    emailId: 'superadmin@dialko.com',
+    mobileNumber: '9999999999',
+    mobileExtension: '9999',
     status: 'Active',
-    role: 'Administrator',
-    userGroup: 'somnathlead_admin',
-    currentChannels: 1,
-    skills: ['English', 'Hindi', 'Sales']
+    role: 'SUPER_ADMIN',
+    userGroup: 'SUPER_ADMIN_GROUP',
+    currentChannels: 5,
+    skills: ['Master Admin', 'Dialko Telephony']
   });
 
   const [activePage, setActivePage] = React.useState('dashboard');
@@ -354,7 +355,7 @@ export default function App() {
 
   // 5. Tenant Administrator & Supervisor Console (/admin)
   return (
-    <div id="zeedial-admin-root" className="min-h-screen bg-[#f1f5f9] flex flex-col text-slate-800 font-sans antialiased">
+    <div id="dialko-admin-root" className="min-h-screen bg-[#f1f5f9] flex flex-col text-slate-800 font-sans antialiased">
       {/* Impersonation Security Banner */}
       {impersonatedUser && (
         <ImpersonationBanner

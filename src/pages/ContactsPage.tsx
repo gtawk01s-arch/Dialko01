@@ -64,7 +64,7 @@ export const ContactsPage: React.FC<ContactsPageProps> = ({ activeTenant }) => {
     const encodedUri = encodeURI(content);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `zeedial_contacts_${Date.now()}.${format.toLowerCase()}`);
+    link.setAttribute("download", `dialko_contacts_${Date.now()}.${format.toLowerCase()}`);
     document.body.appendChild(link);
     link.click();
   };

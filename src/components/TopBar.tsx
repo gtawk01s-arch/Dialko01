@@ -50,7 +50,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     id: 'u-1',
     name: 'Admin Supervisor',
     userId: 'admin_master',
-    emailId: 'admin@zeedial.com',
+    emailId: 'admin@dialko.com',
     role: 'SUPER_ADMIN'
   };
 
@@ -187,7 +187,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               )}
 
               <div className="px-3 py-1.5 text-slate-400 text-[10px] border-t border-slate-100">
-                Zeedial Cloud v2.1.108
+                Dialko Cloud v2.1.108
               </div>
             </div>
           )}
