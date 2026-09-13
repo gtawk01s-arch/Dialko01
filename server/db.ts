@@ -29,7 +29,9 @@ import {
   SurveyResponse,
   CallScript,
   AuditLog,
-  ImpersonationLog
+  ImpersonationLog,
+  AgentPauseLog,
+  AgentActivityLog
 } from '../src/types/index.js';
 
 class InMemoryDB {
@@ -96,6 +98,8 @@ class InMemoryDB {
   smsTemplates: SMSTemplate[] = [];
   smsTriggers: SMSTrigger[] = [];
   smsLogs: SMSLog[] = [];
+  pauseLogs: AgentPauseLog[] = [];
+  agentActivityLogs: AgentActivityLog[] = [];
   surveyForms: SurveyForm[] = [];
   surveyResponses: SurveyResponse[] = [];
   callScripts: CallScript[] = [];
@@ -112,6 +116,9 @@ class InMemoryDB {
     this.callRecordings = [];
     this.callTransfers = [];
     this.liveCalls = [];
+    this.pauseLogs = [];
+    this.agentActivityLogs = [];
+    this.activeAgents = [];
     this.surveyResponses = [];
     this.smsLogs = [];
     this.blockedNumbers = [];

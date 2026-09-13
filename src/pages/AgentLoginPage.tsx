@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Headphones,
   Lock,
@@ -8,7 +8,6 @@ import {
   Eye,
   EyeOff,
   PhoneCall,
-  Briefcase,
   Layers,
   Radio
 } from 'lucide-react';
@@ -32,7 +31,6 @@ export const AgentLoginPage: React.FC<AgentLoginPageProps> = ({
   onSelectTenant,
   onLoginSuccess
 }) => {
-  const [selectedTenantId, setSelectedTenantId] = useState(activeTenant?.id || (tenants[0]?.id || ''));
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -47,15 +45,6 @@ export const AgentLoginPage: React.FC<AgentLoginPageProps> = ({
   const [selectedQueues, setSelectedQueues] = useState<string[]>([]);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
-  useEffect(() => {
-    if (activeTenant?.id) {
-      setSelectedTenantId(activeTenant.id);
-    } else if (tenants.length > 0) {
-      setSelectedTenantId(tenants[0].id);
-      onSelectTenant(tenants[0]);
-    }
-  }, [activeTenant?.id, tenants]);
-
   const handleStep1Submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -68,8 +57,7 @@ export const AgentLoginPage: React.FC<AgentLoginPageProps> = ({
         body: JSON.stringify({
           userId: userId.trim(),
           password: password.trim(),
-          portal: 'agent',
-          tenantId: selectedTenantId
+          portal: 'agent'
         })
       });
 
@@ -82,11 +70,15 @@ export const AgentLoginPage: React.FC<AgentLoginPageProps> = ({
       }
 
       setVerifiedUser(data.user);
+      const userTenant = data.tenant || tenants.find(t => t.id === data.user.tenantId) || activeTenant || tenants[0];
+      if (userTenant) {
+        onSelectTenant(userTenant);
+      }
 
       // Load available campaigns for this agent's client
       setIsLoadingCampaigns(true);
       try {
-        const campRes = await fetch(`/api/campaigns?tenantId=${data.user.tenantId || selectedTenantId}`);
+        const campRes = await fetch(`/api/campaigns?tenantId=${data.user.tenantId || ''}`);
         const campData = await campRes.json();
         if (Array.isArray(campData) && campData.length > 0) {
           setCampaignsList(campData);
@@ -182,34 +174,6 @@ export const AgentLoginPage: React.FC<AgentLoginPageProps> = ({
           )}
 
           <form onSubmit={handleStep1Submit} className="space-y-4">
-            {/* Client Selection */}
-            {tenants.length > 0 && (
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Client Account *
-                </label>
-                <div className="relative">
-                  <Briefcase className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                  <select
-                    id="agent-tenant-select"
-                    value={selectedTenantId}
-                    onChange={e => {
-                      setSelectedTenantId(e.target.value);
-                      const t = tenants.find(item => item.id === e.target.value);
-                      if (t) onSelectTenant(t);
-                    }}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
-                  >
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.code || t.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
                 Agent User ID / Extension *

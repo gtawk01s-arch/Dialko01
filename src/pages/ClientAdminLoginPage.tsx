@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Building2,
   Lock,
@@ -6,8 +6,7 @@ import {
   ArrowRight,
   AlertCircle,
   Eye,
-  EyeOff,
-  Briefcase
+  EyeOff
 } from 'lucide-react';
 import { User, Tenant } from '../types/index.js';
 
@@ -24,21 +23,11 @@ export const ClientAdminLoginPage: React.FC<ClientAdminLoginPageProps> = ({
   onSelectTenant,
   onLoginSuccess
 }) => {
-  const [selectedTenantId, setSelectedTenantId] = useState(activeTenant?.id || (tenants[0]?.id || ''));
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (activeTenant?.id) {
-      setSelectedTenantId(activeTenant.id);
-    } else if (tenants.length > 0) {
-      setSelectedTenantId(tenants[0].id);
-      onSelectTenant(tenants[0]);
-    }
-  }, [activeTenant?.id, tenants]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,8 +41,7 @@ export const ClientAdminLoginPage: React.FC<ClientAdminLoginPageProps> = ({
         body: JSON.stringify({
           userId: userId.trim(),
           password: password.trim(),
-          portal: 'admin',
-          tenantId: selectedTenantId
+          portal: 'admin'
         })
       });
 
@@ -71,7 +59,10 @@ export const ClientAdminLoginPage: React.FC<ClientAdminLoginPageProps> = ({
         return;
       }
 
-      const matchingTenant = tenants.find(t => t.id === data.user.tenantId) || activeTenant || tenants[0];
+      const matchingTenant = data.tenant || tenants.find(t => t.id === data.user.tenantId) || activeTenant || tenants[0];
+      if (matchingTenant) {
+        onSelectTenant(matchingTenant);
+      }
       onLoginSuccess(data.user, 'admin', matchingTenant);
     } catch (err) {
       console.error('Client Admin Login Error', err);
@@ -134,34 +125,6 @@ export const ClientAdminLoginPage: React.FC<ClientAdminLoginPageProps> = ({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Client Selection (if clients exist) */}
-            {tenants.length > 0 && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Client Account *
-                </label>
-                <div className="relative">
-                  <Briefcase className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <select
-                    id="client-admin-tenant-select"
-                    value={selectedTenantId}
-                    onChange={e => {
-                      setSelectedTenantId(e.target.value);
-                      const t = tenants.find(item => item.id === e.target.value);
-                      if (t) onSelectTenant(t);
-                    }}
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition"
-                  >
-                    {tenants.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({t.code || t.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 Admin User ID / Username *

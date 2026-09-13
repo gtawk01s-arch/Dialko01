@@ -143,6 +143,59 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
     originalUser: null
   };
 
+  // Register or update active agent status if Agent portal or Agent role
+  if (portal === 'agent' || matchedUser.role === 'Agent') {
+    const existingAgentIdx = db.activeAgents.findIndex(a => a.agentId === matchedUser.userId || a.id === matchedUser.id);
+    const nowTimeStr = new Date().toLocaleTimeString();
+    const activeData: any = {
+      id: `ag-${matchedUser.id}`,
+      agentId: matchedUser.userId,
+      agentName: matchedUser.name,
+      name: matchedUser.name,
+      agent: matchedUser.userId,
+      extension: matchedUser.mobileExtension || '1001',
+      station: matchedUser.mobileExtension || '1001',
+      tenantId: matchedUser.tenantId,
+      status: 'Ready',
+      dialerStatus: 'READY',
+      callState: 'IDLE',
+      currentCampaign: 'Standard Campaign',
+      queue: 'sales_queue',
+      callsToday: 0,
+      callsHandled: 0,
+      loginTime: nowTimeStr,
+      lastActionTime: new Date().toISOString()
+    };
+    if (existingAgentIdx >= 0) {
+      db.activeAgents[existingAgentIdx] = {
+        ...db.activeAgents[existingAgentIdx],
+        status: 'Ready',
+        dialerStatus: 'READY',
+        callState: 'IDLE',
+        lastActionTime: new Date().toISOString()
+      };
+    } else {
+      db.activeAgents.unshift(activeData);
+    }
+
+    const actIdx = db.agentActivityLogs.findIndex(a => a.agentId === matchedUser.userId && a.tenantId === matchedUser.tenantId);
+    if (actIdx >= 0) {
+      db.agentActivityLogs[actIdx].status = 'ONLINE';
+      db.agentActivityLogs[actIdx].lastLogout = undefined;
+    } else {
+      db.agentActivityLogs.unshift({
+        id: `act-${Date.now()}`,
+        tenantId: matchedUser.tenantId,
+        agentId: matchedUser.userId,
+        agentName: matchedUser.name,
+        status: 'ONLINE',
+        campaign: 'Standard Campaign',
+        firstLogin: nowTimeStr,
+        totalOnlineSec: 0
+      });
+    }
+  }
+
   // Add audit log
   db.auditLogs.unshift({
     id: `al-${Date.now()}`,
@@ -168,6 +221,25 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
 
 apiRouter.post('/auth/logout', (req: Request, res: Response) => {
   if (currentUserSession.user) {
+    const u = currentUserSession.user;
+    // If agent, mark offline
+    const agentIdx = db.activeAgents.findIndex(a => a.agentId === u.userId || a.id === u.id);
+    if (agentIdx >= 0) {
+      db.activeAgents[agentIdx].status = 'Offline';
+      db.activeAgents[agentIdx].dialerStatus = 'PAUSED';
+      db.activeAgents[agentIdx].callState = 'IDLE';
+    }
+    const actIdx = db.agentActivityLogs.findIndex(a => a.agentId === u.userId);
+    if (actIdx >= 0) {
+      db.agentActivityLogs[actIdx].status = 'OFFLINE';
+      db.agentActivityLogs[actIdx].lastLogout = new Date().toLocaleTimeString();
+    }
+    const openPause = db.pauseLogs.find(p => p.agentId === u.userId && !p.endTime);
+    if (openPause) {
+      openPause.endTime = new Date().toLocaleTimeString();
+      openPause.duration = '00:05:00';
+    }
+
     db.auditLogs.unshift({
       id: `al-${Date.now()}`,
       tenantId: currentUserSession.user.tenantId,

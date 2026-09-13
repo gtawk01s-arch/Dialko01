@@ -693,3 +693,28 @@ export interface AuditLog {
   details: string;
   ipAddress: string;
 }
+
+export interface AgentPauseLog {
+  id: string;
+  tenantId: string;
+  agentId: string;
+  agentName: string;
+  pauseReason: string;
+  startTime: string;
+  endTime?: string;
+  duration?: string;
+  durationSec?: number;
+}
+
+export interface AgentActivityLog {
+  id: string;
+  tenantId: string;
+  agentId: string;
+  agentName: string;
+  status: string;
+  campaign: string;
+  firstLogin: string;
+  lastLogout?: string;
+  totalOnline?: string;
+  totalOnlineSec: number;
+}
